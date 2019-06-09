@@ -1,0 +1,279 @@
+---
+title: "Hypertension_Simulation"
+author: "Hemanshu Das"
+date: "5/21/2019"
+output: html_document
+---
+
+The Rmarkdown is an implementation of the simulation model to emulate a cohort of 50 yr old, Male, 27.7BMI Smokers with 150mmHg SBP profile through state-level transitions with constant death rate for a period of 10 years. </br>
+
+The intervention considered is simplistic wherein everyone in the treatment cohort has access to hypertension treatment. 
+
+```{r, echo=FALSE}
+rm(list = ls())               #removing any variables in R's memory
+options(max.print=10000)
+library(ggplot2)
+```
+```{r, echo=TRUE}
+#Model Inputs
+n.i <- 1000                             #Number of individuals
+ini_age <- 50                           #Start Age of Cohort
+end_age <- 60                           #Simulation End Age
+cl <- 12                                 #Number of Cycle in a year
+v.n <- c("W","MI","ST","postMI","postST","cD","D")        #Model States: W-Well, CVD-CVD Event, MI - Myocardial Infraction Transitory State, ST- Transitory Stroke State, cD - CVD Death, D - Death due to other causes
+n.s <- length(v.n)                      #Number of model states
+v.M_1 <- rep("W",n.i)                   #Everyone is Well at the start
+v.Str <- c("No Treatment","Treatment")  #Storing the Strategy Indicator
+n.t <- (end_age - ini_age)*cl                #Simulation cycles
+d.c   <- d.e <- 0.03                    #Equal discounting of costs and QALYs by 3%
+
+#Initialization of Transition Probabilities (Monthly transition)
+p.W_CVD <- 0.00206                  #Probability of CVD transitory event when well; 50 yr, M, Smoker, SBP 150mmHg, BMI 27.7
+p.CVD_MI <- 0.188                  #Probability of MI when CVD event occurs
+p.CVD_ST <- 1 - p.CVD_MI           #Probability of Stroke when CVD event occurs
+p.MI_cD <- 0.335                   #Probability of fatal outcome when MI occurs
+p.ST_cD <- 0.181                   #Probability of fatal outcome when Stroke occurs
+p.MI_postMI <- 1 - p.MI_cD         #Probability of non-fatal outcome when MI occurs
+p.ST_postST <- 1 - p.ST_cD         #Probability of non-fatal outcome when Stroke occurs
+p.postMI_cD <- 0.0022*0.76              #Probability of CVD death post non-fatal MI
+p.postMI_D <- 0.0022*0.24              #Probability of death post non-fatal MI
+p.postST_cD <- 0.0028 *0.336             #Probability of CVD death post non-fatal ST
+p.postST_D <- 0.0028 *0.664             #Probability of death post non-fatal ST
+p.W_D <- 0.00083                   #Probability of normal death from any state
+
+#Intiatlization of Cost for each state
+c.W <- 0                      #cost of being well
+c.MI <- 1428.57                  #cost of acute MI treatment (Assumed to be INR 1,00,000)
+c.ST <- 2142.85                  #cost of acute Stroke treatment (Assumed to be INR 1,50,000)
+c.postMI <- c.postST <- 28.57 #cost of follow up care (Assumed to be INR 2000 p.m)
+c.D <- c.cD <- 0              #cost of Death
+
+#Intialization of Utility for each state
+u.W <- 1                      #utility of being well
+u.MI <- u.postMI <- 0.76                  #utility of MI state
+u.ST <- u.postST <- 0.629                 #utility of Stroke state
+u.D <- u.cD <- 0              #utility of death
+
+# If not treated
+p.W_CVD_NT <- 0.00206          #15% reduction in CVD risk
+c.W_NT <- 0                   #Cost of medication and consultation in a month
+
+# If treated
+p.W_CVD_T <- 0.00172          #15% reduction in CVD risk
+c.W_T <- 4.57                 #Cost of medication and consultation in a month
+
+```
+
+```{r, echo=FALSE}
+####Function to simulate the markov cycle tree
+MicroSim <- function(p.W_CVD,c.W,TS.out = TRUE,TR.out=TRUE,seed=1) { 
+#Arguments:
+          #TS.out:  Flag for matrix of transitions between states
+          #TR.out:  Flag for microsimulation trace
+          #p.UD:    Probability of death when unwell attributed to event
+          #c.U:     Cost of staying unwell due to cost of drugs
+
+          v.dwc <- 1 / (1 + d.c) ^ (0:n.t)            #Vector Multiplication for calculating costs
+          v.dwu <- 1 / (1 + d.e) ^ (0:n.t)           #Vector Multiplication for calculating QALY
+
+#Matrixes to capture state, cost and health outcomes for all individuals at any time point
+m.M <- m.C <- m.U <- matrix(nrow = n.i, ncol=n.t+1,
+                            dimnames = list(paste("ind",1:n.i,sep = " "),
+                                            paste("cycle",0:n.t, sep = " ")))
+m.M[,1] <- v.M_1              #Initial health state
+
+for (i in 1:n.i) {
+          set.seed(seed+i)
+          m.C[i,1] <- Cost(m.M[i,1],c.W)              #Costs per individual for initial health state
+          m.U[i,1] <- Util(m.M[i,1])              #QALY per individual for initial health state
+          
+          for (t in 1:n.t) {
+                    v.p <- Probs(m.M[i,t],p.W_CVD)        #Transition probabilities at cycle t
+                    
+                    m.M[i, t+1] <- sample(v.n, prob = v.p, size =1)   #Sample the next health state
+                    m.C[i, t+1] <- Cost(m.M[i,t+1],c.W)               #Costs per individual at cycle t+1
+                    m.U[i, t+1] <- Util(m.M[i,t+1])                   #QALY per individual at cycle t+1
+          }                                       #Closing loop for cycles
+                                         #Closing loop for progress display
+}
+
+#Calculate number of CVD Deaths
+count_cD <- 0
+for (i in 1:n.i) {
+          if ((m.M[i,n.t+1]) == "cD") {
+                    count_cD = count_cD + 1
+          }
+}
+
+tc <- m.C %*% v.dwc           #Calculating the Costs
+tu <- m.U %*% v.dwu           #Calculating the QALYs
+
+tc_hat <- mean(tc)            #Average Cost
+tu_hat <- mean(tu)            #Average QALY
+
+#Optional Matrix of Transitions between states
+if (TS.out == TRUE) {
+          TS <- paste(m.M, cbind(m.M[,-1],NA), sep = "->")            #Transitions from one state to another
+          TS <- matrix(TS,nrow=n.i)
+          rownames(TS) <- paste("Ind", 1:n.i, sep = " ")              #Naming the rows
+          colnames(TS) <- paste("Cycle", 0:n.t, sep = " ")            #Naming the columns
+} else {
+          TS <- NULL
+}
+
+#Optional Output Trace
+if (TR.out == TRUE) {
+          TR <- t(apply(m.M,2,function(x) table(factor(x,levels=v.n, ordered = TRUE))))
+          TR <- TR/n.i                                                #Creating a Distribution Trace
+          rownames(TR) <- paste("Cycle", 0:n.t, sep = " ")            #Naming the rows
+          colnames(TR) <- v.n                                         #Naming the columns
+} else {
+          TR <- NULL
+}
+
+#Calculating the number of CVD events
+count_CVD <- 0
+ 
+for (i in 1:n.i) {
+          for (t in 1:n.t) {
+                              if (TS[i,t] == "W->MI" || TS[i,t] == "W->ST") {
+                              count_CVD = count_CVD + 1 
+                              }
+          }
+}
+
+#Finding the distribution of states across states
+m.CS <- matrix(nrow = 3, ncol=121,
+               dimnames = list(c("Well","CVD Death","Death"),
+                               paste("Cycle",0:120,sep = " ")))
+m.CS[,] <- 0
+
+for (i in 1:n.i) {
+          for (t in 0:n.t+1) {
+                    if (m.M[i,t] == "W") {
+                              m.CS[1,t] = m.CS[1,t] + 1
+                    }
+                    else if (m.M[i,t] == "cD") {
+                              m.CS[2,t] = m.CS[2,t] + 1
+                    }
+                    else if (m.M[i,t] == "D") {
+                              m.CS[3,t] = m.CS[3,t] + 1
+                    }
+          }
+}
+
+
+results <- list(m.M = m.M, m.C = m.C, m.U = m.U, count_cD = count_cD, tc_hat = tc_hat, tu_hat = tu_hat, tu=tu, TS = TS, TR = TR, count_CVD = count_CVD, m.CS = m.CS)
+return(results)
+}                             #End of the MicroSim Function
+
+####Probability Function to update the transition probabilities of every cycle
+Probs <- function(M.it,p.W_CVD) {
+          #M.it:    Health state occupied by individual i at cycle t
+          #p.UD:    Probability of death when unwell due to event
+          
+          v.p.it <- rep(NA,n.s)                                       #Vector of transition probabilities
+          names(v.p.it) <- v.n                                        #Naming the vector
+          
+          v.p.it[M.it == "W"] <- c(1-(p.W_CVD+p.W_D),p.W_CVD*p.CVD_MI,p.W_CVD*p.CVD_ST,0,0,0,p.W_D) #tranistion probability when well
+          v.p.it[M.it == "MI"] <- c(0,0,0,p.MI_postMI,0,p.MI_cD,0)                          #transition probability when in MI state
+          v.p.it[M.it == "ST"] <- c(0,0,0,0,p.ST_postST,p.ST_cD,0)                          #transition probability when in Stroke state
+          v.p.it[M.it == "postMI"] <- c(0,0,0,(1-(p.postMI_cD+p.postMI_D)),0,p.postMI_cD,p.postMI_D)          #transition probability when in MI state
+          v.p.it[M.it == "postST"] <- c(0,0,0,0,(1-(p.postST_cD+p.postST_D)),p.postST_cD,p.postST_D)                          #transition probability when in Stroke state
+          v.p.it[M.it == "cD"] <- c(0,0,0,0,0,1,0)                     #transition probability when in CVD Death state
+          v.p.it[M.it == "D"] <- c(0,0,0,0,0,0,1)                       #transition probability when in Death state
+          return(v.p.it)                                              #returning probabilities
+}
+
+####Cost function estimates the cost at every cycle
+Cost <- function (M.it, c.W) {
+          #M.it:    Heath state occupied by individual i at cycle t
+          #c.W:     Cost of well state due to continued medication
+          
+          c.it <- 0
+          c.it[M.it == "W"] <- c.W                #Cost if well
+          c.it[M.it == "MI"] <- c.MI                #Cost if MI
+          c.it[M.it == "ST"] <- c.ST                #Cost if stroke
+          c.it[M.it == "postMI"] <- c.postMI                #Cost if MI
+          c.it[M.it == "postST"] <- c.postST                #Cost if stroke
+          c.it[M.it == "cD"] <- c.cD                #Cost if CVD death
+          c.it[M.it == "D"] <- c.D                #Cost if dead
+          return(c.it)                            #Returning costs
+}
+
+#Util function estimates the QALY at every cycle
+Util <- function (M.it) {
+          #M.it:    Health state occupied by individual i at cycle t
+          
+          u.it <- 0
+          u.it[M.it == "W"] <- u.W                #QALY if well
+          u.it[M.it == "MI"] <- u.MI                #QALY if MI
+          u.it[M.it == "ST"] <- u.ST                #QALY if stroke
+          u.it[M.it == "postMI"] <- u.postMI                #QALY if MI
+          u.it[M.it == "postST"] <- u.postST                #QALY if stroke
+          u.it[M.it == "cD"] <- u.cD                #QALY if CVD death
+          u.it[M.it == "D"] <- u.D                #QALY if dead
+          QALY <- u.it * cl
+          return(QALY)                            #Returning costs
+}
+```
+# Running the simulations
+```{r,echo=FALSE}
+#### Running the simulation
+sim_control <- MicroSim(p.W_CVD_NT,c.W_NT)
+sim_treat <- MicroSim(p.W_CVD_T,c.W_T)
+
+#Calculating the comparision between the drugs
+v.CVD <- c(sim_control$count_CVD,sim_treat$count_CVD)
+v.C <- c(sim_control$tc_hat,sim_treat$tc_hat)
+v.U <- c(sim_control$tu_hat,sim_treat$tu_hat)
+v.cD <-c(sim_control$count_cD,sim_treat$count_cD)
+
+ICER <- (v.C[2]-v.C[1])/(v.U[2]-v.U[1])                     #Incremental Cost Effectiveness Ratio
+
+#Data Presentation
+table_microsim <- data.frame(
+          v.CVD,                      #CVD event
+          v.cD,                       #CVD deaths
+          round(v.C, 0),              # costs per arm
+          v.U,              # health outcomes per arm
+          c("", round(ICER, 3))       # ICER
+)
+rownames(table_microsim) = v.Str  # name the rows
+colnames(table_microsim) = c("CVD Events","CVD Deaths","Costs($)", "QALYs", "ICER") # name the columns
+table_microsim                    # print the table 
+```
+According to WHO, if the ICER is less than thrice the GDP per Capita, the investment in the intervention should be pursued. There are alternative aproaches as well, but I haven't explored them yet.
+
+# Diesease transition when No Treatment is provided
+```{r,echo=FALSE}
+sim_control[["m.CS"]]
+```
+# Diesease transition when Treatment is provided
+```{r,echo=FALSE}
+sim_treat[["m.CS"]]
+```
+# Plotting the curves for Survival and CVD Deaths
+```{r,echo=FALSE}
+xdata <- c(0:n.t+1)
+
+cs_nt_well <- t(as.numeric(sim_control$m.CS[1,]))
+cs_nt_cvddeath <- t(as.numeric(sim_control$m.CS[2,]))
+cs_nt_death <- t(as.numeric(sim_control$m.CS[3,]))
+
+cs_t_well <- t(as.numeric(sim_treat$m.CS[1,]))
+cs_t_cvddeath <- t(as.numeric(sim_treat$m.CS[2,]))
+cs_t_death <- t(as.numeric(sim_treat$m.CS[3,]))
+```
+Plot representing the subjects in well state with each cycle transition with "Blue" for Treatment cohort, and Red for No Treatment cohort 
+```{r,echo=FALSE}
+plot(xdata, cs_t_well, type="o", col="blue", pch="o", lty=1, ylim=c(500,1000),xlab="Cycle #", ylab="Number of Subjects" ) + points(xdata, cs_nt_well, col="red", pch="*") + lines(xdata, cs_nt_well, col="red", lty=2) 
+```
+Plot representing the subjects lost due to CVD deaths with each cycle transition with "Blue" for Treatment chort, and Red for No Treatment cohort 
+```{r,echo=FALSE}
+plot(xdata, cs_t_cvddeath, type="o", col="blue", pch="o", lty=1, ylim=c(0,120), xlab="Cycle #", ylab="Number of Subjects") + points(xdata, cs_nt_cvddeath, col="red", pch="*") + lines(xdata, cs_nt_cvddeath, col="red",lty=2)
+```
+Limitations of the current model: </br>
+1. The transition matrix probabilities need to be refined - We can have a detailed discussion on this </br>
+2. The cohort should ideally be run till end of age (ie. death or age=80+ years), but I need to modify the p.W_CVD into a dynamic formula which calculates value based on the risk factor parameters for the individual </br>
+3. The model assumes subjects to eternally stay in MI or Stroke state, and doesn't consider movement back to Well state.

@@ -1,0 +1,2342 @@
+---
+title: "Analysis for 'Cardiovascular risk in India'"
+author: "Pascal Geldsetzer"
+date: "2017-05-13"
+output: pdf_document
+---
+
+Last updated: 2017-07-05
+
+
+# Data cleaning and merging
+Load libraries.
+```{r load packages}
+
+library(tidyverse) 
+library(dplyr) 
+library(forcats) # for categorical variables (R for data science rec) --> see https://rdrr.io/cran/forcats/man/fct_unify.html
+library(stringr) # for manipulating string variables (R for data science rec)
+#library(lubridate) # for dates and times (R for data science rec)
+#instalibrary(dummies) # to easily create dummies
+library(ggrepel) # to avoid text labels in ggplot from overlapping
+#library(margins) # R equivalent of Stata's margins command --> Thomas Leeper said this only to be used for marginal effects (not prediction)
+#library(prediction) # Thomas Leeper's R package to get predicted probabilities
+library(srvyr)  # survey package that also works with dplyr 
+library(lmtest) # for likelihood ratio tests
+#library(sandwich) # for robust standard errors 
+#library(multiwayvcov) # for clustered standard errors
+library(miceadds) # package to cluster SEs more easily than in multiwayvcov; it uses multiwayvcov, so the results between the two packages are exactly the same. 
+#library(glmmML)  # Allows for fast computation of logits and poissons with large number of fixed effects
+library(speedglm)
+library(foreign) # for importing non-csv datasets (but haven in tidyr is better - use that in future)
+library(readstata13) # foreign only reads Stata 12 or lower
+#library(lme4) # for multi-level modeling
+#library(lmerTest) # for p-values with the lmer command
+#library(sjPlot) # for plotting lmer models
+#library(texreg) # for tables
+library(tableone) # Creates a table 1 (summary characteristics)
+#library(mice) # md.pattern() function to see patterns of missing data 
+
+#library(car) # for easy attaching of new variables
+#library(arm)
+#library(mosaic)
+#library(mosaicData)
+#library(mediation)  # for mediation analysis
+#library(lattice)
+#library(pander)
+
+```
+
+
+The code chunk below takes the DLHS and AHS datasets that were cleaned in Stata and contain sampling weights, cleans them further, drops irrelevant columns, and then appends DLHS and AHS to yield a dataset for analysis ("india.cvd"). The code also adds age weights from the WHO standard population, which I calculated separately for adults in an excel file. These weights are multiplied by the sampling weights (sweight) to yield a weight that can be used for age standardization (sworld_weight). 
+
+```{r Cleaning and merging data, eval=FALSE}
+# 1. Import DLHS data ########################################################################################
+dlhs <- read.dta13("DLHS_w3_v2.dta")
+dlhs <- as_tibble(dlhs)
+
+# 2. Drop irrelevant columns in DLHS ##############################################################################################################
+dlhs <- dplyr::select(dlhs, state, state_dist, female, educ, age1, rural, q_ai_nat_rurb, q_ai_nat,
+                      caste, hindu, muslim, christian, sikh, buddhist, jain, noreligion, otherreligion,
+                      dropage, pregnant, 
+                      married,
+                      
+                      BMI,
+                      bpsyst_avg, bpsyst_frst, bpsyst_sec, htn_treated, htn_broad_avg, bpdiast_frst, bpdiast_sec,
+                      glucose, diab_broad, fasted, 
+                      hv98,  # this is the smoking var
+                      
+                      hhid, DLHS, sweight, psu, # vars needed for weighting
+                      ai_NAT, ai_NAT_rurb) 
+
+# 3. Filter out those <18 or pregnant  ##########################################################################################################
+dlhs <- dplyr::filter(dlhs, dropage == 0) # only those >18 and with non-missing age
+dlhs <- dplyr::filter(dlhs, pregnant == 0)  # only keep those who aren't pregnant (they didn't measure glucose in pregnant women anyway); DLHS has no missings in the pregnant variable
+dlhs <- dplyr::select(dlhs, -dropage, -pregnant)
+dlhs.cvd <- dlhs
+dlhs.cvd <- dlhs.cvd %>% 
+  dplyr::rename(age = age1, 
+                smoke = hv98) %>% 
+  mutate(hhid=as.character(hhid))
+
+
+# 4. Import AHS data ##################################################################################
+ahs <- read.dta13("AHS_w3_v2.dta")
+ahs <- as_tibble(ahs)
+
+# 5. Drop irrelevant columns in AHS ######################################################################################################
+ahs <- dplyr::select(ahs, state, state_dist, female, educ, age1, rural, q_ai_nat_rurb, q_ai_nat,
+                      caste, hindu, muslim, christian, sikh, buddhist, jain, noreligion, otherreligion,
+                      dropage, pregnant,
+                      married,
+                      
+                      BMI,
+                      bpsyst_avg, bpsyst_frst, bpsyst_sec, htn_treated, htn_broad_avg, bpdiast_frst, bpdiast_sec,
+                      glucose, diab_broad, 
+                      smoke,  # this is the equivalent to hv98 in dlhs
+                      
+                      fid, DLHS, sweight, psu,  # vars needed for weighting; fid is the hhid equivalent
+                      ai_NAT, ai_NAT_rurb) 
+
+
+ahs.cvd <- ahs %>% 
+  dplyr::rename(age = age1) %>% 
+  mutate(hhid=as.character(fid))  # fid is the household ID in the AHS. 
+
+
+# 6. Filter out those pregnant and <18 ###################################################################################################
+
+ahs.cvd <- dplyr::filter(ahs.cvd, dropage == 0)
+ahs.cvd <- dplyr::filter(ahs.cvd, pregnant == 0 | is.na(pregnant)==TRUE)  
+ahs.cvd <- dplyr::select(ahs.cvd, -dropage, -pregnant)
+
+# 7. Merge AHS AND DLHS  ##############################################################################
+dlhs.cvd$state <- as.factor(dlhs.cvd$state)
+ahs.cvd$state <- as.factor(ahs.cvd$state)
+india.cvd <- bind_rows(dlhs.cvd, ahs.cvd) # ahs.cvd has two less columns than dlhs.cvd because the fasted variable and psu is only in DLHS. R sets this to missing for AHS which is fine. 
+
+# 8. Convert dbl to factors & clean  #################################################################
+india.cvd <- dplyr::select(india.cvd, glucose, BMI, age, bpsyst_avg, bpsyst_frst, bpsyst_sec, bpdiast_frst, bpdiast_sec, sweight, ai_NAT, ai_NAT_rurb, DLHS, everything())
+
+india.cvd[,12:36] <- lapply(india.cvd[,12:36], factor)  # factors all vars but the first 10 
+
+india.cvd <- dplyr::mutate(india.cvd, educ=fct_recode(educ,
+  "<Primary" = "1", 
+  "Pimary" = "2", 
+  "Middle" = "3",
+  "Secondary" = "4",
+  "High School" = "5",
+  ">High School" = "6"))
+
+# This step is necessary because the DLHS states for some reason came without labels (just IDs)
+india.cvd <- mutate(india.cvd,
+  state = ifelse(state==2, "Himachal Pradesh",
+  ifelse(state==3, "Punjab",
+  ifelse(state==4, "Chandigarh",
+  ifelse(state==6, "Haryana",
+  ifelse(state==7, "NCT of Delhi",
+  ifelse(state==11, "Sikkim",
+  ifelse(state==12, "Arunachal Pradesh",
+  ifelse(state==13, "Nagaland",
+  ifelse(state==14, "Manipur",
+  ifelse(state==15, "Mizoram",
+  ifelse(state==16, "Tripura",
+  ifelse(state==17, "Meghalaya",
+  ifelse(state==19, "West Bengal",
+  ifelse(state==25, "Daman and Diu",
+  ifelse(state==27, "Maharashtra",
+  ifelse(state==28, "Andhra Pradesh",
+  ifelse(state==29, "Karnataka",
+  ifelse(state==30, "Goa",
+  ifelse(state==32, "Kerala",
+	ifelse(state==33, "Tamil Nadu",
+	ifelse(state==34, "Puducherry",
+	ifelse(state==35, "Andaman and Nicobar",
+	ifelse(state==36, "Telangana",
+	ifelse(state=="Uttarakhand", "Uttarakhand",
+	ifelse(state=="Rajasthan", "Rajasthan",
+	ifelse(state=="Uttar Pradesh", "Uttar Pradesh",
+	ifelse(state=="Bihar", "Bihar",
+	ifelse(state=="Assam", "Assam",
+	ifelse(state=="Jharkhand", "Jharkhand",
+	ifelse(state=="Odisha", "Odisha",
+	ifelse(state=="Chhattisgarh", "Chhattisgarh", "Madhya Pradesh"))))))))))))))))))))))))))))))))
+india.cvd$state <- as.factor(india.cvd$state)
+
+
+# 9. Create age and bmi group ##############################################################################
+india.cvd <- dplyr::mutate(india.cvd, age_grp = ifelse(age<=25, "18-25", 
+                                                         ifelse(age>25 & age<=35, "26-35",
+                                                                ifelse(age>35 & age<=45, "36-45",
+                                                                       ifelse(age>45 & age<=55, "46-55",
+                                                                              ifelse(age>55 & age<=65, "56-65", ">65")))))) 
+
+india.cvd$age_grp <- factor(india.cvd$age_grp, levels = c("18-25", "26-35", "36-45", "46-55", "56-65", ">65"))
+india.cvd <- within(india.cvd, age_grp <- relevel(age_grp, ref = "18-25"))
+
+india.cvd <- dplyr::mutate(india.cvd, 
+                            bmi_grp = ifelse(BMI<18.5, "<18.5",
+                                            ifelse(BMI>=18.5 & BMI<23, "18.5-<23",
+                                                  ifelse(BMI>=23 & BMI<25, "23-<25",
+                                                        ifelse(BMI>=25 & BMI<30, "25-<30", ">=30")))))
+
+india.cvd$bmi_grp <- as.factor(india.cvd$bmi_grp)
+
+# Calculate BMIgrt25
+india.cvd <- dplyr::mutate(india.cvd, 
+                            BMIgrt25 = ifelse(BMI>=25, "1", "0"))
+india.cvd$BMIgrt25 <- as.factor(india.cvd$BMIgrt25)
+
+# Calculate obese
+india.cvd <- dplyr::mutate(india.cvd, 
+                            obese = ifelse(BMI>=30, "1", "0"))
+india.cvd$obese <- as.factor(india.cvd$obese)
+
+
+
+# 10. Create smoking variables
+##########################################################################################################
+# Current smoker:
+india.cvd <- mutate(india.cvd, 
+                   currsmoke = ifelse(smoke==1 | smoke==2 | smoke == "occational-smoker" | smoke == "usual-smoker", 1,
+                                      ifelse(smoke==3 | smoke==4 | smoke == "ex-smoker" | smoke == "never-smoked", 0, NA)))
+india.cvd$currsmoke <- as.factor(india.cvd$currsmoke)
+
+# ever smoker
+india.cvd <- mutate(india.cvd, 
+                   eversmoke = ifelse(smoke==1 | smoke==2 | smoke==3 | smoke == "occational-smoker" | smoke == "usual-smoker" | smoke == "ex-smoker", 1,
+                                      ifelse(smoke==4 | smoke == "never-smoked", 0, NA)))
+india.cvd$eversmoke <- as.factor(india.cvd$eversmoke)
+
+
+
+# 11. Clean up caste, relig, create male, urban, and labelled vars ######################################
+# AHS contains only ST, SC, and other, while DLHS has ST, SC, OBC, and other. I'm merging OBC and other in DLHS so that it's comparable. 
+
+india.cvd <- mutate(india.cvd, 
+                     religion = ifelse(hindu=="yes", "Hindu", 
+                                       ifelse(christian=="yes", "Christian",
+                                              ifelse(muslim=="yes", "Muslim",
+                                                     ifelse(sikh=="yes", "Sikh", 
+                                                            ifelse(buddhist=="yes", "Buddhist",
+                                                                    ifelse(noreligion=="yes" | otherreligion=="yes" | jain=="yes", "Other", NA)))))))  
+india.cvd$religion <- as.factor(india.cvd$religion)   
+
+india.cvd <- mutate(india.cvd, 
+                     caste = fct_recode(caste, 
+                          "Scheduled caste" = "1",
+                          "Scheduled tribe" = "2",
+                          "Other"="3",
+                          "Other"="4"))
+
+india.cvd <- mutate(india.cvd, 
+                     urban = ifelse(rural=="1", 0, 1),
+                     male = ifelse(female=="1", 0, 1))
+india.cvd$urban <- as.factor(india.cvd$urban)
+india.cvd$male <- as.factor(india.cvd$male)
+
+india.cvd <- india.cvd %>% 
+  mutate(female_lab = as.factor(ifelse(is.na(female) == TRUE, NA, 
+                                    ifelse(female == 1, "Female", "Male"))),
+         urban_lab = as.factor(ifelse(is.na(rural) == TRUE, NA, 
+                                    ifelse(rural == 1, "Rural", "Urban"))),
+         q_ai_nat_rurb_lab = as.factor(ifelse(is.na(q_ai_nat_rurb) == TRUE, NA, 
+                                    ifelse(q_ai_nat_rurb == 1, "Poorest", 
+                                           ifelse(q_ai_nat_rurb == 5, "Richest", q_ai_nat_rurb)))))
+
+india.cvd$q_ai_nat_rurb_lab <- as.factor(india.cvd$q_ai_nat_rurb_lab)
+india.cvd <- within(india.cvd, q_ai_nat_rurb_lab <- relevel(q_ai_nat_rurb_lab, ref = "Poorest"))
+
+
+# 12. Correct missings in diabetes and htn  ######################################################################################
+india.cvd <- india.cvd %>% 
+  mutate(diab_broad = ifelse(is.na(glucose)==TRUE, NA, diab_broad)) 
+india.cvd$diab_broad <- as.factor(india.cvd$diab_broad)
+india.cvd <- india.cvd %>% 
+  mutate(htn_broad_avg = ifelse(is.na(bpsyst_frst)==TRUE | is.na(bpsyst_sec)==TRUE | is.na(bpdiast_frst)==TRUE | is.na(bpdiast_sec)==TRUE, NA, htn_broad_avg))
+india.cvd$htn_broad_avg <- as.factor(india.cvd$htn_broad_avg)
+
+
+
+# 13. Sampling weights  ######################################################################################
+# Give missing sweight obs the average sweight (very few obs have a missing sweight)
+
+india.cvd <- mutate(india.cvd, 
+                     sweight = ifelse(is.na(sweight)==TRUE, mean(sweight, na.rm=TRUE), sweight))
+
+# merge age standardization weight from WHO standard pop into the dataset
+agest_dat <- read_csv("ageweights_2017-04-03.csv")
+india.cvd <- left_join(india.cvd, agest_dat, by="age")
+india.cvd <- mutate(india.cvd, 
+                     sworld_weight = sweight*agest_weight)
+
+# set missing sworld_weight to mean sworld_weight:
+india.cvd <- mutate(india.cvd, 
+                     sworld_weight = ifelse(is.na(age)==TRUE, mean(sworld_weight, na.rm=TRUE), sworld_weight))
+
+```
+
+
+
+
+
+Note: Globorisk produces a missing for all ages>80 and <40
+```{r Add globorisk - export to Stata, eval=TRUE}
+
+# globoriskdat <- india.cvd %>%
+#     mutate(sex = female,
+#            sbp = bpsyst_avg,
+#            smk = currsmoke,
+#            bmi = BMI,
+#            iso = "IND",
+#            year = 2013)  # should I pull this from the actual survey date instead? Decision: don't bother
+# 
+#   write.dta(globoriskdat, "/Users/pgeldsetzer/Documents/aa SD/India DLHS & AHS/Data analysis/Cardiovascular risk/Resubmission/To calculate globorisk/globorisk.dta")
+
+# --> Now run: "Assign office based 10 y CVD risk_2017-05-14.do"
+
+# Load Stata dataset
+india.cvd <- read.dta13("globorisk.dta")
+
+# Clean Stata dataset
+india.cvd <- india.cvd %>%
+  mutate(globorisk = 100*ten_y_cvd) %>% 
+  dplyr::select(-ten_y_cvd)
+
+
+```
+
+
+```{r Add Harvard-NHANES}
+
+# Read in the proportion surviving as calculated from GBD results tool, create ID, and merge
+propsurv <- read_csv("proportionsurv_2017-07-14.csv")
+propsurv <- mutate(propsurv, 
+                   mergeid = str_c(as.character(female), as.character(age), sep="_"))
+india.cvd <- mutate(india.cvd, 
+                    mergeid = str_c(as.character(female), as.character(age), sep="_"))
+india.cvd <- left_join(india.cvd, propsurv, by="mergeid")
+india.cvd <- india.cvd %>% 
+  dplyr::rename(age = age.x, 
+                female = female.x) %>% 
+  dplyr::select(-age.y, -female.y, -mergeid)
+
+
+# Add dbl vars
+india.cvd <- mutate(india.cvd, 
+                    diab_broad_dbl = as.numeric(diab_broad)-1,
+                    currsmoke_dbl = as.numeric(currsmoke)-1,
+                    htn_treated_dbl = as.numeric(htn_treated)-1,
+                    female_dbl = as.numeric(female)-1)
+
+# Calculate harvard nhanes risk score
+  # males:
+india.cvd_male <- india.cvd %>% 
+  filter(female==0) %>% 
+  mutate(
+  male_coeffs = (3.58368*log(age)) + (1.52494*log(bpsyst_avg)) + (0.21637*htn_treated_dbl) + (0.58835*currsmoke_dbl) + (0.65134*diab_broad_dbl) + (0.65523*log(BMI)),
+  male_interc = (3.58368*log(weighted.mean(age, sweight, na.rm=TRUE))) + (1.52494*log(weighted.mean(bpsyst_avg, sweight, na.rm=TRUE))) + (0.21637*weighted.mean(htn_treated_dbl, sweight, na.rm=TRUE)) + (0.58835*weighted.mean(currsmoke_dbl, sweight, na.rm=TRUE)) + (0.65134*weighted.mean(diab_broad_dbl, sweight, na.rm=TRUE)) + (0.65523*log(weighted.mean(BMI, sweight, na.rm=TRUE))))
+  
+  # females:
+india.cvd_female <- india.cvd %>% 
+  filter(female==1) %>% 
+  mutate(
+  female_coeffs = (3.78311*log(age)) + (1.49885*log(bpsyst_avg)) + (0.35734*htn_treated_dbl) + (0.5745*currsmoke_dbl) + (0.65749*diab_broad_dbl) + (0.83452*log(BMI)),
+  female_interc = (3.78311*log(weighted.mean(age, sweight, na.rm=TRUE))) + (1.49885*log(weighted.mean(bpsyst_avg, sweight, na.rm=TRUE))) + (0.35734*weighted.mean(htn_treated_dbl, sweight, na.rm=TRUE)) + (0.5745*weighted.mean(currsmoke_dbl, sweight, na.rm=TRUE)) + (0.65749*weighted.mean(diab_broad_dbl, sweight, na.rm=TRUE)) + (0.83452*log(weighted.mean(BMI, sweight, na.rm=TRUE))))
+
+# merge back together
+india.cvd <- bind_rows(india.cvd_male, india.cvd_female)
+
+# add hazard
+india.cvd <- mutate(india.cvd, 
+                    hazard = -log(propsurv_harv)) # hazard code the same for both sexes as already merged into dataset
+  
+
+
+india.cvd <- mutate(india.cvd, 
+  expdiff_male = exp(male_coeffs - male_interc),
+  survt_male = exp((-hazard) * 10), # here is where you adjust the number of yrs
+  expdiff_female = exp(female_coeffs - female_interc),
+  survt_female = exp((-hazard) * 10)) # here is where you adjust the number of yrs
+
+india.cvd <- mutate(india.cvd, 
+  harvrisk_male = ((1-(survt_male^expdiff_male))*100),
+  harvrisk_female = ((1-(survt_female^expdiff_female))*100))
+
+india.cvd <- india.cvd %>% 
+  mutate(harvrisk = ifelse(female==0, harvrisk_male, harvrisk_female)) %>% 
+  dplyr::select(-harvrisk_male, -harvrisk_female, -male_coeffs, -female_coeffs, -male_interc, female_interc, -hazard, -expdiff_male, -survt_male, -expdiff_female, -survt_female)
+
+# To check whether risk scores were calculated correctly
+# testdat <- india.cvd %>%
+#   dplyr::select(age, female_dbl, bpsyst_avg, currsmoke_dbl, diab_broad_dbl, htn_treated_dbl, BMI, harvrisk, propsurv) %>% 
+#   filter(female_dbl==1 & age>50 & age <55 & bpsyst_avg >130 & bpsyst_avg <132 & BMI>33 & BMI<35) 
+
+```
+
+
+
+```{r Add Framingham}
+# Because the score has a different beta for sbp depending on whether it's treated or not, first create a variable for sbp coefficient:
+india.cvd <- mutate(india.cvd,
+   framsbpcoef = ifelse(female == 0 & htn_treated == 0, 1.85508,
+                        ifelse(female==0 & htn_treated == 1, 1.92672,
+                               ifelse(female==1 & htn_treated == 0, 2.81291,
+                                      ifelse(female==1 & htn_treated == 1, 2.88267, NA)))))
+
+
+# Calculate Framingham risk score
+ # males:
+ india.cvd_male <- india.cvd %>% 
+   filter(female==0) %>% 
+   mutate(
+   male_coeffs = (log(age)*3.11296) + (log(bpsyst_avg)*framsbpcoef) + (currsmoke_dbl*0.70953) + (log(BMI)*0.79277) + (diab_broad_dbl*0.53160),
+   male_interc = (3.11296*log(weighted.mean(age, sweight, na.rm=TRUE))) + (framsbpcoef*log(weighted.mean(bpsyst_avg, sweight, na.rm=TRUE))) + (0.70953*weighted.mean(currsmoke_dbl, sweight, na.rm=TRUE)) + (0.53160*weighted.mean(diab_broad_dbl, sweight, na.rm=TRUE)) + (0.79277*log(weighted.mean(BMI, sweight, na.rm=TRUE)))) 
+   
+   # females:
+ india.cvd_female <- india.cvd %>% 
+   filter(female==1) %>% 
+   mutate(
+   female_coeffs = (log(age)*2.72107) + (log(bpsyst_avg)*framsbpcoef) + (currsmoke_dbl*0.61868) + (log(BMI)*0.51125) + (diab_broad_dbl*0.77763),
+   female_interc = (2.72107*log(weighted.mean(age, sweight, na.rm=TRUE))) + (framsbpcoef*log(weighted.mean(bpsyst_avg, sweight, na.rm=TRUE))) + (0.61868*weighted.mean(currsmoke_dbl, sweight, na.rm=TRUE)) + (0.77763*weighted.mean(diab_broad_dbl, sweight, na.rm=TRUE)) + (0.51125*log(weighted.mean(BMI, sweight, na.rm=TRUE)))) 
+
+# merge back together
+india.cvd <- bind_rows(india.cvd_male, india.cvd_female)
+
+# add hazard
+india.cvd <- mutate(india.cvd, 
+                    hazard = -log(propsurv_fram)) # hazard code the same for both sexes as already merged into dataset
+
+
+ india.cvd <- mutate(india.cvd,
+   expdiff_male = exp(male_coeffs - male_interc),
+   survt_male = exp((-hazard) * 10),
+   expdiff_female = exp(female_coeffs - female_interc),
+   survt_female = exp((-hazard) * 10))
+
+ india.cvd <- mutate(india.cvd,
+   framrisk_male = ((1-(survt_male^expdiff_male))*100),
+   framrisk_female = ((1-(survt_female^expdiff_female))*100))
+
+
+ india.cvd <- india.cvd %>%
+   mutate(framrisk = ifelse(female==0, framrisk_male, framrisk_female)) %>%
+   dplyr::select(-framrisk_male, -framrisk_female, -male_coeffs, -female_coeffs, -male_interc, female_interc, -hazard, -expdiff_male, -survt_male, -expdiff_female, -survt_female)
+
+#To check whether risk scores were calculated correctly
+# testdat <- india.cvd %>%
+#   dplyr::select(age, female_dbl, bpsyst_avg, currsmoke_dbl, diab_broad_dbl, htn_treated_dbl, BMI, framrisk_male, framrisk_female, propsurv) %>%
+#   filter(female_dbl==0 & age>50 & age <55 & bpsyst_avg >130 & bpsyst_avg <132 & BMI>33 & BMI<35)
+
+```
+
+
+
+```{r Create zones}
+
+################## Zones as per: https://en.wikipedia.org/wiki/Administrative_divisions_of_India
+india.cvd <- mutate(india.cvd, 
+                    # Nothern
+    zone = as.factor(ifelse(state=="Chandigarh" | state=="NCT of Delhi" | state=="Haryana" | state=="Himachal Pradesh" | state=="Punjab" | state=="Rajasthan", "North",
+                    # Northeastern
+           ifelse(state=="Assam" | state=="Arunachal Pradesh" | state=="Manipur" | state=="Meghalaya" | state=="Mizoram" | state=="Nagaland" | state=="Sikkim" | state=="Tripura", "Northeast",
+                    # Central
+           ifelse(state=="Chhattisgarh" | state=="Madhya Pradesh" | state=="Uttarakhand" | state== "Uttar Pradesh", "Central",
+                    # Eastern
+           ifelse(state=="Bihar" | state=="Jharkhand" | state=="Odisha" | state=="West Bengal", "East",
+                    # Western
+           ifelse(state=="Daman and Diu" | state=="Goa" | state=="Maharashtra", "West",
+                    # Southern
+           ifelse(state=="Andaman and Nicobar" | state=="Andhra Pradesh" | state=="Karnataka" | state=="Kerala" | state=="Puducherry" | state=="Tamil Nadu" | state=="Telangana", "South", NA))))))))
+
+```
+
+
+
+```{r Restrict to certain age groups}
+
+india.cvd <- filter(india.cvd, 
+                    age>=30 & age <75)
+
+# Redo age group variable:
+india.cvd <- mutate(india.cvd, 
+                    age_grp = as.factor(
+                      ifelse(age>=30 & age<35, "30-34",
+                        ifelse(age>=35 & age<40, "35-39",
+                            ifelse(age>=40 & age<45, "40-44", 
+                                ifelse(age>=45 & age<50, "45-49",
+                                   ifelse(age>=50 & age<55, "50-54",
+                                      ifelse(age>=55 & age<60, "55-59",
+                                         ifelse(age>=60 & age<65, "60-64",
+                                            ifelse(age>=65 & age <70, "65-69", "70-74")))))))))) 
+
+```
+
+
+
+```{r Add a GBD population weight}
+# The population estimates were taken from: http://ghdx.healthdata.org/record/global-burden-disease-study-2015-gbd-2015-population-estimates-1970-2015
+#as per email from Michelle L. Subart. I used the 2015 estimates to calculate the weights. 
+
+gbd.w <- read_csv("GBDpopweights_2017-07-08.csv")
+gbd.w$female <- as.factor(gbd.w$female)
+gbd.w$age_grp <- as.factor(gbd.w$age_grp)
+
+india.cvd <- left_join(india.cvd, gbd.w, by=c("female", "age_grp"))
+
+india.cvd <- mutate(india.cvd,
+                    sgbdweight=gbd_weight*sweight)
+
+```
+
+
+
+
+```{r Take out missings in outcome var}
+
+india.cvd <- filter(india.cvd, 
+                    is.na(harvrisk)==FALSE & is.na(framrisk)==FALSE)
+
+
+# test <- filter(india.cvd, 
+#                      is.na(age)==FALSE & is.na(female)==FALSE & is.na(bpsyst_avg)==FALSE & is.na(diab_broad_dbl)==FALSE & is.na(BMI)==FALSE & is.na(currsmoke)==FALSE)
+
+```
+
+
+# Table 1
+```{r Table 1, eval=FALSE}
+
+india.cvd <- mutate(india.cvd, 
+      sbp_grp = ifelse(bpsyst_avg < 120, "<120",
+                  ifelse(bpsyst_avg >=120 & bpsyst_avg < 130, "120-129",
+                     ifelse(bpsyst_avg >=130 & bpsyst_avg < 140, "130-139",
+                        ifelse(bpsyst_avg >=140 & bpsyst_avg <180, "140-179", 
+                            ifelse(bpsyst_avg >=180, ">=180", NA))))),
+      globorisk_miss = as.factor(ifelse(is.na(globorisk)==TRUE, "Missing", "Not missing")),
+      harvrisk_miss =  as.factor(ifelse(is.na(harvrisk)==TRUE, "Missing", "Not missing")))
+
+table1names <- c("globorisk", "harvrisk", "framrisk",
+                 "age_grp", 
+                 "BMI", "bmi_grp",
+                 "bpsyst_avg", "sbp_grp", "htn_treated",
+                 "diab_broad",
+                 "male",
+                 "currsmoke", "eversmoke",
+                 "educ", "q_ai_nat_rurb", "married", "urban", 
+                 "harvrisk_miss") 
+
+totalmiss <- CreateTableOne(vars = table1names, data=india.cvd, strata = "male", includeNA=TRUE)
+print(totalmiss)
+
+totalnomiss <- CreateTableOne(vars = table1names, data=india.cvd, strata = "male", includeNA=FALSE)
+print(totalnomiss)
+
+sexmiss <- CreateTableOne(vars = table1names, strata=c("female"), data=india.cvd, includeNA=TRUE)
+print(sexmiss)
+
+sexnomiss <- CreateTableOne(vars = table1names, strata=c("female", "harvrisk_miss"), data=india.cvd, includeNA=FALSE)
+print(sexnomiss)
+
+
+```
+
+
+
+
+```{r WHO ISH Risk}
+#Step 1: Install whoishRisk package
+
+# library(devtools)
+# 
+# install_github("DylanRJCollins/whoishRisk")
+
+#Step 2: Load whoishRisk package into workspace
+
+library(whoishRisk)
+
+#Step 3: Load risk factor data
+india.cvd <- mutate(india.cvd, 
+                    Age=age, 
+                    Gender=as.numeric(male)-1, 
+                    Smoking=currsmoke_dbl,
+                    Systolic_Blood_Pressure = bpsyst_avg,
+                    Diabetes=diab_broad_dbl, 
+                    Total_Cholesterol=0)
+
+#Step 4: Pass the risk factor vectors to the WHO_ISH_Risk() function, and set subregion equal to the name of the appropriate epidemiological subregion (e.g. “EMR_B”). This will return a vector of WHO/ISH risk scores.
+
+india.cvd <- mutate(india.cvd,
+  whorisk = WHO_ISH_Risk(Age, Gender, Smoking, Systolic_Blood_Pressure, Diabetes, Total_Cholesterol, "SEAR_D"))
+india.cvd$whorisk <- as.factor(india.cvd$whorisk)
+
+```
+
+
+
+
+```{r Create 30% threshold vals}
+india.cvd <- mutate(india.cvd, 
+                    harv30 = ifelse(harvrisk>=30.0, 1, 0),
+                    fram30 = ifelse(framrisk>=30.0, 1, 0),
+                    globo30 = ifelse(globorisk>=30.0, 1, 0),
+                    who30 = ifelse(whorisk=="30% to <40%" | whorisk==">=40%", 1, 0))
+
+```
+
+
+
+```{r National prevalence, eval=FALSE}
+
+india.cvd <- mutate(india.cvd, 
+                    agegrt50 = ifelse(age>=50,1,0))
+
+# create stratum ID
+india.cvd$state_dist_str <- as.character(india.cvd$state_dist)
+india.cvd$rural_str <- as.character(india.cvd$rural)
+india.cvd <- mutate(india.cvd, 
+                     stratumid = str_c(state_dist_str, rural_str, sep = "_")) 
+india.cvd$stratumid <- as.factor(india.cvd$stratumid)
+
+#create PSU ID:
+india.cvd <- india.cvd %>% 
+                   mutate(psu_str = as.character(psu), 
+                          psuid = str_c(state_dist_str, psu_str, sep = "_"))
+india.cvd$psuid <- as.factor(india.cvd$psuid)
+
+
+# After trying all possible combinations, the below is the best way of specifying the survey design. # The point estimates are unaffected by any of the svy choices unless sweight is not included. The only impact is on the SEs and the SEs are very small in every possible scenario. I have decided not to include fpc as district is a stratum (rather than a sampling unit) and I'm fairly confident that usually <5% of PSUs in each districts were selected. The inclusion of stratumid does not affect the point estimates or CIs but I'm still included it in just in case. The fact that I can't include PSU-ID in the AHS states and the overall svydesign makes my CIs a bit too tight but I don't think it's worth worrying about (since CIs are very tight here anyway). 
+
+##################### >30% risk #########################
+# crude prev
+
+svy_tot <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sweight,
+                        variables = c(framrisk, harvrisk, globorisk, female_lab, age_grp, agegrt50))
+                        #variables = c(harv30, fram30, globo30, who30, female_lab, age_grp, agegrt50))
+
+
+prev_tot <- svy_tot %>%
+  group_by(female_lab) %>% 
+  summarize(meanharvrisk = survey_mean(harv30, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meanframrisk = survey_mean(fram30, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meangloborisk = survey_mean(globo30, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meanwhorisk = survey_mean(who30, proportion=TRUE, prop_method="asin", vartype = "ci")) %>% 
+  mutate(meanharvrisk=100*meanharvrisk, 
+         meanharvrisk_low=100*meanharvrisk_low,
+         meanharvrisk_upp=100*meanharvrisk_upp,
+         meanframrisk=100*meanframrisk,
+         meanframrisk_low=100*meanframrisk_low,
+         meanframrisk_upp=100*meanframrisk_upp,
+         meangloborisk=100*meangloborisk,
+         meangloborisk_low=100*meangloborisk_low,
+         meangloborisk_upp=100*meangloborisk_upp, 
+         meanwhorisk=100*meanwhorisk,
+         meanwhorisk_low=100*meanwhorisk_low,
+         meanwhorisk_upp=100*meanwhorisk_upp)
+
+
+##################### Mean CVD risk #########################
+# crude prev
+svy_totmean <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sweight,
+                        variables = c(harvrisk, framrisk, globorisk, female_lab, age_grp, agegrt50))
+
+prev_totmean <- svy_totmean %>%
+  group_by(female_lab, agegrt50) %>% 
+  summarize(meanharvrisk = survey_mean(harvrisk, vartype = "ci"),
+            meanframrisk = survey_mean(framrisk, vartype = "ci"),
+            meangloborisk = survey_mean(globorisk, vartype = "ci")) 
+
+
+# age-standardized
+svy_totmean <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sgbdweight,
+                        variables = c(harvrisk, framrisk, globorisk, female_lab, age_grp, state))
+
+prev_totmean <- svy_totmean %>%
+  group_by(female_lab, state) %>% 
+  summarize(meanharvrisk = survey_mean(harvrisk, vartype = "ci"),
+            meanframrisk = survey_mean(framrisk, vartype = "ci"),
+            meangloborisk = survey_mean(globorisk, vartype = "ci")) 
+
+##################### >30% risk by state #########################
+svy_totstate <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sgbdweight,
+                        variables = c(harv30, fram30, globo30, female_lab, state, a))
+
+prev_totstate <- svy_totstate %>%
+  group_by(state, female_lab) %>% 
+  summarize(meanharvrisk = survey_mean(harv30, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meanframrisk = survey_mean(fram30, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meangloborisk = survey_mean(globo30, proportion=TRUE, prop_method="asin", vartype = "ci", na.rm=TRUE)) %>% 
+  mutate(meanharvrisk=100*meanharvrisk, 
+         meanharvrisk_low=100*meanharvrisk_low,
+         meanharvrisk_upp=100*meanharvrisk_upp,
+         meanframrisk=100*meanframrisk,
+         meanframrisk_low=100*meanframrisk_low,
+         meanframrisk_upp=100*meanframrisk_upp,
+         meangloborisk=100*meangloborisk,
+         meangloborisk_low=100*meangloborisk_low,
+         meangloborisk_upp=100*meangloborisk_upp)
+
+#write_csv(prev_totstate, "prev_totstate_2017-07-15.csv")
+
+##################### Risk factor prev by state #########################
+# crude prev
+svy_totfac <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sgbdweight,
+                        variables = c(BMI, diab_broad_dbl, bpsyst_avg, currsmoke_dbl, female_lab, state))
+
+prev_totfac <- svy_totfac %>%
+  group_by(state, female_lab) %>% 
+  summarize(meanbmi = survey_mean(BMI, vartype = "ci"),
+            meandiab = survey_mean(diab_broad_dbl, proportion=TRUE, prop_method="asin", vartype = "ci"),
+            meanbpsyst = survey_mean(bpsyst_avg, vartype = "ci"),
+            meansmk = survey_mean(currsmoke_dbl, proportion=TRUE, prop_method="asin", vartype = "ci")) %>% 
+  mutate(meandiab=100*meandiab, 
+         meandiab_low=100*meandiab_low,
+         meandiab_upp=100*meandiab_upp,
+         meansmk=100*meansmk,
+         meansmk_low=100*meansmk_low,
+         meansmk_upp=100*meansmk_upp)
+
+#write_csv(prev_totfac, "prev_totfac_2017-07-15.csv")
+
+```
+
+
+
+```{r Calculate prevalences for Ashish to map, eval=FALSE}
+
+# Make 10-year age groups
+india.cvd <- india.cvd %>% 
+  mutate(tenyrage_grp = as.factor(
+                  ifelse(age<40, "30-39", 
+                      ifelse(age>=40 & age<50, "40-49",
+                          ifelse(age>=50 & age<60, "50-59",
+                              ifelse(age>=60 & age<75, "60-74", NA))))))
+
+# Calculate average diastolic BP
+india.cvd <- india.cvd %>%
+  mutate(bpdiast_avg = 
+           ifelse(is.na(bpdiast_frst)==F & is.na(bpdiast_sec)==F, (bpdiast_frst+bpdiast_sec)/2,
+              ifelse(is.na(bpdiast_frst)==T & is.na(bpdiast_sec)==F, bpdiast_sec,
+                   ifelse(is.na(bpdiast_frst)==F & is.na(bpdiast_sec)==T, bpdiast_frst, NA))))
+
+
+
+# ------ FRAMINGHAM
+# continuous
+framcontbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meanrisk = weighted.mean(framrisk, sgbdweight, na.rm=TRUE))
+write_csv(framcontbysex, "continuous_framingham_bysex_2018-03-03.csv")
+
+framcontbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meanrisk = weighted.mean(framrisk, sgbdweight, na.rm=TRUE))
+write_csv(framcontbyage, "continuous_framingham_byage_2018-03-03.csv")
+
+framcontbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meanrisk = weighted.mean(framrisk, sgbdweight, na.rm=TRUE))
+write_csv(framcontbyrurb, "continuous_framingham_byrurb_2018-03-03.csv")
+
+# binary
+frambinbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalence = weighted.mean(fram30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(frambinbysex, "binary_framingham_bysex_2018-03-03.csv")
+
+frambinbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalence = weighted.mean(fram30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(frambinbyage, "binary_framingham_byage_2018-03-03.csv")
+
+frambinbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalence = weighted.mean(fram30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(frambinbyrurb, "binary_framingham_byrurb_2018-03-03.csv")
+
+
+
+# ------ HARVARD-NHANES
+# continuous
+harvcontbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meanrisk = weighted.mean(harvrisk, sgbdweight, na.rm=TRUE))
+write_csv(harvcontbysex, "continuous_harvnhanes_bysex_2018-03-03.csv")
+
+harvcontbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meanrisk = weighted.mean(harvrisk, sgbdweight, na.rm=TRUE))
+write_csv(harvcontbyage, "continuous_harvnhanes_byage_2018-03-03.csv")
+
+harvcontbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meanrisk = weighted.mean(harvrisk, sgbdweight, na.rm=TRUE))
+write_csv(harvcontbyrurb, "continuous_harvnhanes_byrurb_2018-03-03.csv")
+
+# binary
+harvbinbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalence = weighted.mean(harv30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(harvbinbysex, "binary_harvnhanes_bysex_2018-03-03.csv")
+
+harvbinbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalence = weighted.mean(harv30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(harvbinbyage, "binary_harvnhanes_byage_2018-03-03.csv")
+
+harvbinbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalence = weighted.mean(harv30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(harvbinbyrurb, "binary_harvnhanes_byrurb_2018-03-03.csv")
+
+
+
+
+# ------ GLOBORISK
+# continuous
+globocontbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meanrisk = weighted.mean(globorisk, sgbdweight, na.rm=TRUE))
+write_csv(globocontbysex, "continuous_globorisk_bysex_2018-03-03.csv")
+
+globocontbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meanrisk = weighted.mean(globorisk, sgbdweight, na.rm=TRUE))
+write_csv(globocontbyage, "continuous_globorisk_byage_2018-03-03.csv")
+
+globocontbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meanrisk = weighted.mean(globorisk, sgbdweight, na.rm=TRUE))
+write_csv(globocontbyrurb, "continuous_globorisk_byrurb_2018-03-03.csv")
+
+# binary
+globobinbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalence = weighted.mean(globo30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(globobinbysex, "binary_globorisk_bysex_2018-03-03.csv")
+
+globobinbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalence = weighted.mean(globo30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(globobinbyage, "binary_globorisk_byage_2018-03-03.csv")
+
+globobinbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalence = weighted.mean(globo30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(globobinbyrurb, "binary_globorisk_byrurb_2018-03-03.csv")
+
+
+# ------ WHO-ISH
+# (continuous not possible because WHO-ISH only yields ranges, not actual values)
+# binary
+whobinbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalence = weighted.mean(who30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(whobinbysex, "binary_whorisk_bysex_2018-03-03.csv")
+
+whobinbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalence = weighted.mean(who30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(whobinbyage, "binary_whorisk_byage_2018-03-03.csv")
+
+whobinbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalence = weighted.mean(who30, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(whobinbyrurb, "binary_whorisk_byrurb_2018-03-03.csv")
+
+
+# ------ BMI
+bmibysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meanbmi = weighted.mean(BMI, sgbdweight, na.rm=TRUE))
+write_csv(bmibysex, "bmi_bysex_2018-03-03.csv")
+
+bmibyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meanbmi = weighted.mean(BMI, sgbdweight, na.rm=TRUE))
+write_csv(bmibyage, "bmi_byage_2018-03-03.csv")
+
+bmibyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meanbmi = weighted.mean(BMI, sgbdweight, na.rm=TRUE))
+write_csv(bmibyrurb, "bmi_byrurb_2018-03-03.csv")
+
+
+# ------ High blood glucose
+glucbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalencehighgluc = weighted.mean(diab_broad_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(glucbysex, "gluc_bysex_2018-03-03.csv")
+
+glucbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalencehighgluc = weighted.mean(diab_broad_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(glucbyage, "gluc_byage_2018-03-03.csv")
+
+glucbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalencehighgluc = weighted.mean(diab_broad_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(glucbyrurb, "gluc_byrurb_2018-03-03.csv")
+
+
+# ------ Smoking
+smokbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(prevalencesmoking = weighted.mean(currsmoke_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(smokbysex, "smok_bysex_2018-03-03.csv")
+
+smokbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(prevalencesmoking = weighted.mean(currsmoke_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(smokbyage, "smok_byage_2018-03-03.csv")
+
+smokbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(prevalencesmoking = weighted.mean(currsmoke_dbl, proportion=T, sgbdweight, na.rm=TRUE))
+write_csv(smokbyrurb, "smok_byrurb_2018-03-03.csv")
+
+
+# ------ systolic BP
+systbpbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meansystbp = weighted.mean(bpsyst_avg, sgbdweight, na.rm=TRUE))
+write_csv(systbpbysex, "systbp_bysex_2018-03-03.csv")
+
+systbpbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meansystbp = weighted.mean(bpsyst_avg, sgbdweight, na.rm=TRUE))
+write_csv(systbpbyage, "systbp_byage_2018-03-03.csv")
+
+systbpbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meansystbp = weighted.mean(bpsyst_avg, sgbdweight, na.rm=TRUE))
+write_csv(systbpbyrurb, "systbp_byrurb_2018-03-03.csv")
+
+
+# ------ diastolic BP
+diastbpbysex <- india.cvd %>% 
+  group_by(state, female_lab) %>% 
+  summarize(meandiastbp = weighted.mean(bpdiast_avg, sgbdweight, na.rm=TRUE))
+write_csv(diastbpbysex, "diastbp_bysex_2018-03-03.csv")
+
+diastbpbyage <- india.cvd %>% 
+  group_by(state, tenyrage_grp) %>% 
+  summarize(meandiastbp = weighted.mean(bpdiast_avg, sgbdweight, na.rm=TRUE))
+write_csv(diastbpbyage, "diastbp_byage_2018-03-03.csv")
+
+diastbpbyrurb <- india.cvd %>% 
+  group_by(state, urban_lab) %>% 
+  summarize(meandiastbp = weighted.mean(bpdiast_avg, sgbdweight, na.rm=TRUE))
+write_csv(diastbpbyrurb, "diastbp_byrurb_2018-03-03.csv")
+
+```
+
+
+
+```{r Multilevel modeling, eval=FALSE}
+
+# First turn PSU into a unique variable
+india.cvd <- india.cvd %>% 
+  mutate(state_disttemp = as.numeric(state_dist) * 100000,
+         psu = as.factor(state_disttemp + as.numeric(psu)))
+  
+
+# Create log of outcome vars
+india.cvd <- india.cvd %>% 
+  mutate(logharv = log(harvrisk),
+         logfram = log(framrisk),
+         logglobo = log(globorisk)) 
+
+# Create separate dataset for rural and urban
+rural.cvd <- india.cvd %>% 
+  filter(urban==0)
+
+urban.cvd <- india.cvd %>% 
+  filter(urban==1)
+
+
+# Add level-2 covariates to data
+
+rural.cvd <- rural.cvd %>% 
+  group_by(state_dist) %>% 
+  mutate(medianai = median(ai_NAT_rurb, na.rm=TRUE)) %>% 
+  ungroup()
+
+
+urban.cvd <- urban.cvd %>% 
+  group_by(state_dist) %>% 
+  mutate(medianai = median(ai_NAT_rurb, na.rm=TRUE)) %>% 
+  ungroup()
+
+india.cvd <- india.cvd %>% 
+  mutate(urban_dbl = as.numeric(urban)-1) %>% 
+  group_by(state_dist) %>%
+  mutate(propurban = mean(urban_dbl, na.rm=TRUE)) %>% 
+  ungroup()
+
+# Divide medianai into quintiles
+rural.cvd <- rural.cvd %>% 
+  mutate(q_medianai = as.factor(ntile(medianai, 5)))
+
+urban.cvd <- urban.cvd %>% 
+  mutate(q_medianai = as.factor(ntile(medianai, 5)))
+
+
+# Grand-mean center propurban (rest is binary or factor vars)
+india.cvd <- india.cvd %>% 
+  mutate(propurban_c = as.numeric(scale(propurban, scale=F)))  # this subtracts the mean ("grand-mean centering") and does not divide by SD 
+
+library(lme4)
+library(lmerTest)
+
+#*************** Framingham
+
+mlmframrural <- lmer(logfram ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=rural.cvd)
+summary(mlmframrural)
+difflsmeans(mlmframrural)
+
+mlmframurban <- lmer(logfram ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=urban.cvd)
+summary(mlmframurban)
+difflsmeans(mlmframurban)
+
+mlmfram_propurban <- lmer(logfram ~ q_ai_nat_rurb + educ + age_grp + male + propurban_c + (1|state_dist), data=india.cvd)
+summary(mlmfram_propurban)
+
+
+#*************** Harvard-NHANES
+mlmharvrural <- lmer(logharv ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=rural.cvd)
+summary(mlmharvrural)
+#difflsmeans(mlmharvrural)
+
+mlmharvurban <- lmer(logharv ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=urban.cvd)
+summary(mlmharvurban)
+#difflsmeans(mlmharvurban)
+
+mlmharv_propurban <- lmer(logharv ~ q_ai_nat_rurb + educ + age_grp + male + propurban_c + (1|state_dist), data=india.cvd)
+summary(mlmharv_propurban)
+
+
+#*************** Globorisk
+mlmgloborural <- lmer(logglobo ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=rural.cvd)
+summary(mlmgloborural)
+#difflsmeans(mlmgloborural)
+
+mlmglobourban <- lmer(logglobo ~ q_ai_nat_rurb + educ + age_grp + male + q_medianai + (1|state_dist), data=urban.cvd)
+summary(mlmglobourban)
+#difflsmeans(mlmglobourban)
+
+mlmglobo_propurban <- lmer(logglobo ~ q_ai_nat_rurb + educ + age_grp + male + propurban_c + (1|state_dist), data=india.cvd)
+summary(mlmglobo_propurban)
+
+```
+
+
+
+
+
+```{r State map - male, eval=FALSE}
+
+########################  SET-UP  ############################
+
+library(rgeos)
+library(rgdal)
+library(raster) # get data for maps
+
+india <- getData("GADM", country = "India", level = 1)
+dat <- data.frame(id = 1:(length(india@data$NAME_1)), state = india@data$NAME_1)
+india <- gSimplify(india, tol=0.01, topologyPreserve=TRUE) # this drastically reduces the detail in the GADM file to allow for decently quick plotting
+map <- fortify(india) # makes a dataset out of a spatial object
+map$id <- as.integer(map$id) # that's just to be able to merge it
+
+#dat <- data.frame(id = 1:(length(india@data$NAME_1)), state = india@data$NAME_1) # This is just a df of state names and state IDs
+dat <- filter(dat, 
+              row_number() != 31) # This just removes the Tamil Nadu duplicate (for some reason the india spatial data has a separate row for Madras as for TN)
+
+
+centers <- data.frame(gCentroid(india, byid = TRUE)) # a df of latitude and longitude
+centers <- filter(centers, 
+                  row_number() !=31)  # This is removing the Tamil Nadu duplicate
+centers$state <- as.factor(dat$state)  # adding state names to it
+centers <- as_tibble(centers)
+
+# Abbreviating the state names and throwing out Lakshadweep and Dadra, Nagar Haveli, D&D, Chandigarh, and Puducherry
+
+centers <- centers %>% 
+  mutate(state = fct_recode(state, 
+                            "HP" = "Himachal Pradesh",
+                            "PB" = "Punjab",
+                            "Chandigarh" = "Chandigarh",
+                            "HR" = "Haryana",
+                            "DL" = "NCT of Delhi",
+                            "SK" = "Sikkim",
+                            "Daman and Diu" = "Daman and Diu",
+                            "AR" = "Arunachal Pradesh",
+                            "NL" = "Nagaland",
+                            "MN" = "Manipur",
+                            "MZ" = "Mizoram",
+                            "TR" = "Tripura",
+                            "ML" = "Meghalaya",
+                            "WB" = "West Bengal",
+                            "MH" = "Maharashtra",
+                            "AP" = "Andhra Pradesh",
+                            "KA" = "Karnataka",
+                            "GA" = "Goa",
+                            "KL" = "Kerala",
+                            "Puducherry" = "Puducherry",
+                            "TN" = "Tamil Nadu",
+                            "AN" = "Andaman and Nicobar",
+                            "TS" = "Telangana",
+                            "UK" = "Uttarakhand",
+                            "RJ" = "Rajasthan",
+                            "UP" = "Uttar Pradesh",
+                            "BR" = "Bihar",
+                            "AS" = "Assam",
+                            "JH" = "Jharkhand",
+                            "OD" = "Odisha",
+                            "CT" = "Chhattisgarh", 
+                            "MP" = "Madhya Pradesh",
+                            "JK" = "Jammu and Kashmir",
+                            "GJ" = "Gujarat",
+                            "Lakshadweep" = "Lakshadweep",
+                            "Dadra and Nagar Haveli" = "Dadra and Nagar Haveli")) %>%
+  filter(state != "Lakshadweep" & state != "Dadra and Nagar Haveli" & state != "Chandigarh" & state != "Daman and Diu" & state != "Puducherry")
+
+
+
+
+theme_map <- function (base_size = 12, base_family = "") {
+theme_gray(base_size = base_size, base_family = base_family) %+replace% 
+theme(
+axis.line=element_blank(),
+axis.text.x=element_blank(),
+axis.text.y=element_blank(),
+axis.ticks=element_blank(),
+axis.ticks.length=unit(0.3, "lines"),
+axis.ticks.margin=unit(0.5, "lines"),  # deprecated
+axis.title.x=element_blank(),
+axis.title.y=element_blank(),
+legend.background=element_rect(fill="white", colour=NA),
+legend.key=element_rect(colour="white"),
+legend.key.size=unit(1.5, "lines"),
+legend.position="right",
+legend.text=element_text(size=15, family="Times"),
+legend.title=element_blank(),
+panel.background=element_blank(),
+panel.border=element_blank(),
+panel.grid.major=element_blank(),
+panel.grid.minor=element_blank(),
+panel.margin=unit(0, "lines"),  # deprecated
+plot.background=element_blank(),
+plot.margin=unit(c(1, 1, 0.5, 0.5), "lines"),
+plot.title=element_text(size=rel(1.8), face="bold", hjust=0.5, family="Times"),
+strip.background=element_rect(fill="white", colour="white"),
+strip.text=element_text(size=rel(1.4), face="italic", family="Times")
+)   
+}
+
+
+
+temp.dat <- india.cvd %>% 
+  group_by(state, female_lab) %>%
+  mutate(globo30_st = 100*weighted.mean(globo30, proportion=TRUE, sgbdweight, na.rm=TRUE),
+         harvrisk30_st = 100*weighted.mean(harv30, proportion=TRUE, sgbdweight, na.rm=TRUE),
+         framrisk30_st = 100*weighted.mean(fram30, proportion=TRUE, sgbdweight, na.rm=TRUE),
+         who30_st = 100*weighted.mean(who30, proportion=TRUE, sgbdweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>% 
+  dplyr::select(state, globo30_st, harvrisk30_st, framrisk30_st, who30_st, female_lab)
+
+
+# Get J&K and GJ grey areas in: 
+state <- c("Jammu and Kashmir", "Jammu and Kashmir", "Gujarat", "Gujarat")
+female_lab <- c("Female", "Male", "Female", "Male")
+grey.dat <- as_tibble(data.frame(state, female_lab))
+grey.dat <- mutate(grey.dat, 
+                   framrisk30_st = NA,
+                   globo30_st = NA, 
+                   harvrisk30_st = NA,
+                   who30_st = NA)
+temp.dat <- bind_rows(temp.dat, grey.dat)
+
+
+map.dat <- left_join(dat, temp.dat, by="state") # adds an id column to cvd_tempdat
+map.dat <- inner_join(map, map.dat, by = "id")
+map.dat <- filter(map.dat, is.na(female_lab)==F)
+
+
+# library(extrafont)
+# loadfonts()
+
+# Now plot the actual map - Framingham
+frammap <- ggplot() +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group, fill=framrisk30_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+                  aes(label = state, x = x, y = y, fontface=2), 
+                  size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  coord_map() +
+  facet_wrap(~female_lab) +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  theme_map()
+frammap
+
+
+# Now plot the actual map - Harvard
+harvmap <- ggplot() +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group, fill=harvrisk30_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+                  aes(label = state, x = x, y = y, fontface=2), 
+                  size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  coord_map() +
+  facet_wrap(~female_lab) +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  theme_map()
+harvmap
+
+
+
+# Now plot the actual map - Globorisk
+globomap <- ggplot() +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group, fill=globo30_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+                  aes(label = state, x = x, y = y, fontface=2), 
+                  size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  coord_map() +
+  facet_wrap(~female_lab) +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  theme_map()
+globomap
+
+
+# Now plot the actual map - WHO-ISH
+whomap <- ggplot() +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.dat, map = map.dat,
+         aes(map_id = id, group = group, fill=who30_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+                  aes(label = state, x = x, y = y, fontface=2), 
+                  size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  coord_map() +
+  facet_wrap(~female_lab) +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  theme_map()
+whomap
+
+
+######################## BMI  ############################
+# Now calculate prevalence by state
+bmimale_tempdat <- india.cvd %>% 
+  group_by(state, female_lab) %>%
+  mutate(bmi_st = weighted.mean(BMI, sgbdweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>% 
+  dplyr::select(state, bmi_st, female_lab)
+
+# Get J&K and GJ grey areas in: 
+state <- c("Jammu and Kashmir", "Jammu and Kashmir", "Gujarat", "Gujarat")
+female_lab <- c("Female", "Male", "Female", "Male")
+grey.dat <- as_tibble(data.frame(state, female_lab))
+grey.dat <- mutate(grey.dat, 
+                   bmi_st = NA)
+bmimale_tempdat <- bind_rows(bmimale_tempdat, grey.dat)
+
+map.datbmi <- left_join(dat, bmimale_tempdat, by="state") # adds an id column to cvd_tempdat
+map.datbmi <- inner_join(map, map.datbmi, by = "id")
+map.datbmi <- filter(map.datbmi, is.na(female_lab)==F)
+
+
+# Now plot the actual map
+bmi_male <- ggplot() +
+  geom_map(data=map.datbmi, map = map.datbmi,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.datbmi, map = map.datbmi,
+         aes(map_id = id, group = group, fill=bmi_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+         aes(label = state, x = x, y = y, fontface=2), 
+         size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  facet_wrap(~female_lab) + 
+  coord_map() +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  theme_map() +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  ggtitle(bquote(bold('Mean Body Mass Index'~(kg/m^2))))
+bmi_male
+
+
+
+########################  Systolic BP  ############################
+
+# Now calculate prevalence by state
+sbpmale_tempdat <- india.cvd %>% 
+  group_by(state, female_lab) %>%
+  mutate(sbp_st = weighted.mean(bpsyst_avg, sgbdweight, na.rm=TRUE)) %>%
+  filter(row_number()==1) %>% 
+  dplyr::select(state, sbp_st, female_lab)
+
+# Get J&K and GJ grey areas in: 
+state <- c("Jammu and Kashmir", "Jammu and Kashmir", "Gujarat", "Gujarat")
+female_lab <- c("Female", "Male", "Female", "Male")
+grey.dat <- as_tibble(data.frame(state, female_lab))
+grey.dat <- mutate(grey.dat, 
+                   sbp_st = NA)
+sbpmale_tempdat <- bind_rows(sbpmale_tempdat, grey.dat)
+
+
+map.datsbp <- left_join(dat, sbpmale_tempdat, by="state") # adds an id column to cvd_tempdat
+map.datsbp <- inner_join(map, map.datsbp, by = "id")
+map.datsbp <- filter(map.datsbp, is.na(female_lab)==F)
+
+
+# Now plot the actual map
+sbp_male <- ggplot() +
+  geom_map(data=map.datsbp, map = map.datsbp,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.datsbp, map = map.datsbp,
+         aes(map_id = id, group = group, fill=sbp_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+         aes(label = state, x = x, y = y, fontface=2), 
+         size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  facet_wrap(~female_lab) +
+  coord_map() +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  theme_map() +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  ggtitle("Mean systolic blood pressure (mmHg)")
+sbp_male
+
+
+
+########################  Diabetes  ############################
+
+# Now calculate prevalence by state
+diabmale_tempdat <- india.cvd %>% 
+  group_by(state, female_lab) %>%
+  mutate(diab_st = 100*weighted.mean(diab_broad_dbl, sgbdweight, na.rm=TRUE)) %>%
+  filter(row_number()==1) %>% 
+  dplyr::select(state, diab_st, female_lab)
+
+state <- c("Jammu and Kashmir", "Jammu and Kashmir", "Gujarat", "Gujarat")
+female_lab <- c("Female", "Male", "Female", "Male")
+grey.dat <- as_tibble(data.frame(state, female_lab))
+grey.dat <- mutate(grey.dat, 
+                   diab_st = NA)
+diabmale_tempdat <- bind_rows(diabmale_tempdat, grey.dat)
+
+
+map.datdiab <- left_join(dat, diabmale_tempdat, by="state") # adds an id column to cvd_tempdat
+map.datdiab <- inner_join(map, map.datdiab, by = "id")
+map.datdiab <- filter(map.datdiab, is.na(female_lab)==F)
+
+# Now plot the actual map
+diab_male <- ggplot() +
+  geom_map(data=map.datdiab, map = map.datdiab,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.datdiab, map = map.datdiab,
+         aes(map_id = id, group = group, fill=diab_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+         aes(label = state, x = x, y = y, fontface=2), 
+         size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  facet_wrap(~female_lab) +
+  coord_map() +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  theme_map() +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  ggtitle("Diabetes prevalence (%)")
+diab_male
+
+
+########################  Current smoker  ############################
+
+# Now calculate prevalence by state
+smkmale_tempdat <- india.cvd %>% 
+  group_by(state, female_lab) %>%
+  mutate(smk_st = 100*weighted.mean(currsmoke_dbl, sgbdweight, na.rm=TRUE)) %>%
+  filter(row_number()==1) %>% 
+  dplyr::select(state, smk_st, female_lab)
+
+
+state <- c("Jammu and Kashmir", "Jammu and Kashmir", "Gujarat", "Gujarat")
+female_lab <- c("Female", "Male", "Female", "Male")
+grey.dat <- as_tibble(data.frame(state, female_lab))
+grey.dat <- mutate(grey.dat, 
+                   smk_st = NA)
+smkmale_tempdat <- bind_rows(smkmale_tempdat, grey.dat)
+
+
+map.datsmk <- left_join(dat, smkmale_tempdat, by="state") # adds an id column to cvd_tempdat
+map.datsmk <- inner_join(map, map.datsmk, by = "id")
+map.datsmk <- filter(map.datsmk, is.na(female_lab)==F)
+
+# Now plot the actual map
+smk_male <- ggplot() +
+  geom_map(data=map.datsmk, map = map.datsmk,
+         aes(map_id = id, group = group),
+         color = "#ffffff", fill = "#ececec", size = 0.25) +
+  geom_map(data=map.datsmk, map = map.datsmk,
+         aes(map_id = id, group = group, fill=smk_st),
+         color = "#ffffff", size = 0.25) +
+  geom_text_repel(data = centers, 
+         aes(label = state, x = x, y = y, fontface=2), 
+         size = 5, segment.color = "black", segment.size = 0.3, family="Times") +
+  facet_wrap(~female_lab) +
+  coord_map() +
+  scale_fill_distiller(palette = "OrRd", direction = 1, na.value = "grey80") +
+  labs(x = "", y = "") +
+  theme_map() +
+  xlim(68, 98) + 
+  ylim(7, 35) +
+  ggtitle("Smoking prevalence (%)")
+smk_male
+
+
+```
+
+
+
+
+```{r Framingham heatmap, eval=FALSE}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+framheatdat <- india.cvd %>% 
+  filter(is.na(q_ai_nat_rurb)==FALSE & is.na(urban)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meanfram = weighted.mean(framrisk, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meanfram, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_fram <- ggplot(data=framheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meanfram)) + 
+    geom_text(aes(label=sprintf("%1.0f", meanfram)), size=5) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean risk") +
+   theme(axis.text=element_text(size=15, face="bold", family="Times"),
+        axis.title=element_text(size=22, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18, family="Times"),
+        strip.text=element_text(size=18, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  coord_fixed(0.55555) # 5 wealth quintiles over 7 age groups
+heatmap_fram
+
+
+```
+
+
+
+```{r Globorisk heatmap, eval=FALSE}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+globoheatdat <- india.cvd %>% 
+  filter(is.na(q_ai_nat_rurb)==FALSE & is.na(urban)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meanglobo = weighted.mean(globorisk, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meanglobo, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_globo <- ggplot(data=globoheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meanglobo)) + 
+    geom_text(aes(label=sprintf("%1.0f", meanglobo)), size=5) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean risk") +
+   theme(axis.text=element_text(size=15, face="bold", family="Times"),
+        axis.title=element_text(size=22, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18, family="Times"),
+        strip.text=element_text(size=18, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  coord_fixed(0.55555)
+heatmap_globo
+
+
+```
+
+
+
+
+```{r Harvard NHANES heatmap, eval=FALSE}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+harvheatdat <- india.cvd %>% 
+  filter(is.na(q_ai_nat_rurb)==FALSE & is.na(urban)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meanharv = weighted.mean(harvrisk, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meanharv, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_harv <- ggplot(data=harvheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meanharv)) + 
+    geom_text(aes(label=sprintf("%1.0f", meanharv)), size=5) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean risk") +
+   theme(axis.text=element_text(size=15, face="bold", family="Times"),
+        axis.title=element_text(size=22, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18, family="Times"),
+        strip.text=element_text(size=18, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  coord_fixed(0.55555)
+heatmap_harv
+
+
+```
+
+
+
+```{r WHO-ISH heatmap, eval=FALSE}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+whoheatdat <- india.cvd %>% 
+  filter(is.na(q_ai_nat_rurb)==FALSE & is.na(urban)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meanwho = weighted.mean(who30, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meanwho, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_who <- ggplot(data=whoheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=100*meanwho)) + 
+    geom_text(aes(label=sprintf("%1.1f", 100*meanwho)), size=5) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean risk") +
+   theme(axis.text=element_text(size=15, face="bold", family="Times"),
+        axis.title=element_text(size=22, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=18, family="Times"),
+        strip.text=element_text(size=18, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  coord_fixed(0.55555)
+heatmap_who
+
+
+```
+
+
+
+
+```{r Regressions, eval=FALSE}
+
+############################# MALES ###############################
+male.cvd <- india.cvd %>% 
+  mutate(logharv = log(harvrisk),
+         logfram = log(framrisk),
+         logglobo = log(globorisk)) %>% 
+  filter(female == 0 & is.na(q_ai_nat_rurb)==FALSE & is.na(educ)==FALSE & is.na(urban)==FALSE)
+
+# Framingham
+frammulti_speed <- speedlm(data=male.cvd, formula = logfram ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(frammulti_speed)
+confint.default(frammulti_speed)
+
+framwealth_speed <- speedlm(data=male.cvd, formula = logfram ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(framwealth_speed)
+confint.default(framwealth_speed)
+
+frameduc_speed <- speedlm(data=male.cvd, formula = logfram ~ educ + age_grp + state_dist)
+summary(frameduc_speed)
+confint.default(frameduc_speed)
+
+framurb_speed <- speedlm(data=male.cvd, formula = logfram ~ urban + age_grp + state_dist)
+summary(framurb_speed)
+confint.default(framurb_speed)
+
+# Harvard-NHANES
+harvmulti_speed <- speedlm(data=male.cvd, formula = logharv ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(harvmulti_speed)
+confint.default(harvmulti_speed)
+
+harvwealth_speed <- speedlm(data=male.cvd, formula = logharv ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(harvwealth_speed)
+confint.default(harvwealth_speed)
+
+harveduc_speed <- speedlm(data=male.cvd, formula = logharv ~ educ + age_grp + state_dist)
+summary(harveduc_speed)
+confint.default(harveduc_speed)
+
+harvurb_speed <- speedlm(data=male.cvd, formula = logharv ~ urban + age_grp + state_dist)
+summary(harvurb_speed)
+confint.default(harvurb_speed)
+
+
+# Globorisk
+globomulti_speed <- speedlm(data=male.cvd, formula = logglobo ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(globomulti_speed)
+confint.default(globomulti_speed)
+
+globowealth_speed <- speedlm(data=male.cvd, formula = logglobo ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(globowealth_speed)
+confint.default(globowealth_speed)
+
+globoeduc_speed <- speedlm(data=male.cvd, formula = logglobo ~ educ + age_grp + state_dist)
+summary(globoeduc_speed)
+confint.default(globoeduc_speed)
+
+globourb_speed <- speedlm(data=male.cvd, formula = logglobo ~ urban + age_grp + state_dist)
+summary(globourb_speed)
+confint.default(globourb_speed)
+
+############################# FEMALES ###############################
+female.cvd <- india.cvd %>% 
+  mutate(logharv = log(harvrisk),
+         logfram = log(framrisk),
+         logglobo = log(globorisk)) %>% 
+  filter(female == 1 & is.na(q_ai_nat_rurb)==FALSE & is.na(educ)==FALSE & is.na(urban)==FALSE)
+
+# Framingham
+frammulti_speed <- speedlm(data=female.cvd, formula = logfram ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(frammulti_speed)
+confint.default(frammulti_speed)
+
+frameduc_speed <- speedlm(data=female.cvd, formula = logfram ~ educ + age_grp + state_dist)
+summary(frameduc_speed)
+confint.default(frameduc_speed)
+
+framwealth_speed <- speedlm(data=female.cvd, formula = logfram ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(framwealth_speed)
+confint.default(framwealth_speed)
+
+framurb_speed <- speedlm(data=female.cvd, formula = logfram ~ urban + age_grp + state_dist)
+summary(framurb_speed)
+confint.default(framurb_speed)
+
+# Harvard-NHANES
+harvmulti_speed <- speedlm(data=female.cvd, formula = logharv ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(harvmulti_speed)
+confint.default(harvmulti_speed)
+
+harvwealth_speed <- speedlm(data=female.cvd, formula = logharv ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(harvwealth_speed)
+confint.default(harvwealth_speed)
+
+harveduc_speed <- speedlm(data=female.cvd, formula = logharv ~ educ + age_grp + state_dist)
+summary(harveduc_speed)
+confint.default(harveduc_speed)
+
+harvurb_speed <- speedlm(data=female.cvd, formula = logharv ~ urban + age_grp + state_dist)
+summary(harvurb_speed)
+confint.default(harvurb_speed)
+
+# Globorisk
+globomulti_speed <- speedlm(data=female.cvd, formula = logglobo ~ q_ai_nat_rurb + educ + urban + age_grp + state_dist)
+summary(globomulti_speed)
+confint.default(globomulti_speed)
+
+globowealth_speed <- speedlm(data=female.cvd, formula = logglobo ~ q_ai_nat_rurb + age_grp + state_dist)
+summary(globowealth_speed)
+confint.default(globowealth_speed)
+
+globoeduc_speed <- speedlm(data=female.cvd, formula = logglobo ~ educ + age_grp + state_dist)
+summary(globoeduc_speed)
+confint.default(globoeduc_speed)
+
+
+globourb_speed <- speedlm(data=female.cvd, formula = logglobo ~ urban + age_grp + state_dist)
+summary(globourb_speed)
+confint.default(globourb_speed)
+
+
+```
+
+
+
+
+
+```{r Heatmap hypertension}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+bpheatdat <- india.cvd %>%
+  filter(is.na(q_ai_nat_rurb)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meansystbp = weighted.mean(bpsyst_avg, sweight, na.rm=TRUE),
+         meandiastbp = weighted.mean(bpsyst_avg, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meansystbp, meandiastbp, female, q_ai_nat_rurb, urban)
+
+# Systolic BP: 
+heatmap_bp <- ggplot(data=bpheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meansystbp)) + 
+    geom_text(aes(label=sprintf("%1.0f", meansystbp)), size=7) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean systolic BP") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle("Systolic blood pressure (mmHg)") +
+  coord_fixed(0.55555)
+heatmap_bp
+
+
+# Diastolic BP: 
+heatmap_bp <- ggplot(data=bpheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meandiastbp)) + 
+    geom_text(aes(label=sprintf("%1.0f", meandiastbp)), size=7) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean diastolic BP") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle("Diastolic blood pressure (mmHg)") +
+  coord_fixed(0.55555)
+heatmap_bp
+```
+
+
+
+```{r Heatmap smoking}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+smokeheatdat <- india.cvd %>%  
+  filter(is.na(q_ai_nat_rurb)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meansmoke = 100*weighted.mean(currsmoke_dbl, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meansmoke, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_smoke <- ggplot(data=smokeheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meansmoke)) + 
+    geom_text(aes(label=sprintf("%1.0f", meansmoke)), size=7) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Ever smoked (%)") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle("Smoking (%)") +
+  coord_fixed(0.55555)
+heatmap_smoke
+```
+
+
+```{r Heatmap BMI}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+bmiheatdat <- india.cvd %>%
+  filter(is.na(q_ai_nat_rurb)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meanbmi = weighted.mean(BMI, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meanbmi, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_bmi <- ggplot(data=bmiheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meanbmi)) + 
+    geom_text(aes(label=sprintf("%1.1f", meanbmi)), size=7) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="Mean BMI") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle(bquote(bold('Body Mass Index'~(kg/m^2)))) +
+  coord_fixed(0.55555)
+heatmap_bmi
+
+```
+
+
+
+
+```{r Heatmap diabetes}
+
+# First, I group the dataset by the relevant vars, calculate the mean, and take the first row in each group 
+diabheatdat <- india.cvd %>% 
+  filter(is.na(q_ai_nat_rurb)==FALSE) %>% 
+  group_by(female, q_ai_nat_rurb, age_grp, urban) %>% 
+  mutate(meandiab = 100*weighted.mean(diab_broad_dbl, sweight, na.rm=TRUE)) %>% 
+  filter(row_number()==1) %>%   
+  dplyr::select(female_lab, q_ai_nat_rurb_lab, age_grp, urban_lab, meandiab, female, q_ai_nat_rurb, urban)
+
+# Now create the actual heatmap: 
+heatmap_diab <- ggplot(data=diabheatdat, aes(x=q_ai_nat_rurb_lab, y=age_grp)) +
+    geom_tile(aes(fill=meandiab)) + 
+    geom_text(aes(label=sprintf("%1.0f", meandiab)), size=7) +
+    facet_grid(female_lab ~ urban_lab) +
+    scale_fill_distiller(palette = "RdYlGn", direction = -1) +
+   theme_classic() +
+   labs(x = "Household wealth quintile",
+       y = "Age group (years)",
+       fill="High blood glucose (%)") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle("High blood glucose (%)") +
+  coord_fixed(0.5555)
+heatmap_diab
+```
+
+
+
+```{r Alternative measure of treatment need}
+
+india.cvd <- mutate(india.cvd, 
+                    htn_broad_avg_dbl = as.numeric(htn_broad_avg) -1,
+                    treatneed = ifelse(htn_broad_avg_dbl==1 | diab_broad_dbl==1 | currsmoke_dbl==1 | BMI>=25, 1, 0))
+
+
+india.cvd <- mutate(india.cvd, 
+                    agegrt50 = ifelse(age>=50,1,0))
+
+
+# create stratum ID
+india.cvd$state_dist_str <- as.character(india.cvd$state_dist)
+india.cvd$rural_str <- as.character(india.cvd$rural)
+india.cvd <- mutate(india.cvd, 
+                     stratumid = str_c(state_dist_str, rural_str, sep = "_")) 
+india.cvd$stratumid <- as.factor(india.cvd$stratumid)
+
+#create PSU ID:
+india.cvd <- india.cvd %>% 
+                   mutate(psu_str = as.character(psu), 
+                          psuid = str_c(state_dist_str, psu_str, sep = "_"))
+india.cvd$psuid <- as.factor(india.cvd$psuid)
+
+
+# After trying all possible combinations, the below is the best way of specifying the survey design. # The point estimates are unaffected by any of the svy choices unless sweight is not included. The only impact is on the SEs and the SEs are very small in every possible scenario. I have decided not to include fpc as district is a stratum (rather than a sampling unit) and I'm fairly confident that usually <5% of PSUs in each districts were selected. The inclusion of stratumid does not affect the point estimates or CIs but I'm still included it in just in case. The fact that I can't include PSU-ID in the AHS states and the overall svydesign makes my CIs a bit too tight but I don't think it's worth worrying about (since CIs are very tight here anyway). 
+
+##################### >30% risk #########################
+# crude prev
+
+svy_tot <- india.cvd %>% 
+           as_survey_design(stratum = stratumid,
+                        ids = c(psuid, hhid),
+                        weights = sweight,
+                        variables = c(treatneed, female_lab, age_grp, agegrt50))
+
+
+prev_tot <- svy_tot %>%
+  group_by(female_lab) %>% 
+  summarize(meantreatneed = survey_mean(treatneed, proportion=TRUE, prop_method="asin", vartype = "ci", na.rm=T)) %>% 
+  mutate(needprev=100*meantreatneed, 
+         needprev_low=100*meantreatneed_low,
+         needprev_upp=100*meantreatneed_upp)
+
+write_csv(prev_tot, "needtreatbyage_2017-09-29.csv")
+
+```
+
+```{r Histogram of continuous variables}
+bmihist <- india.cvd %>%  
+  filter(BMI<50) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=BMI), color="black", fill="light blue", binwidth = 1) + 
+  facet_wrap(~female_lab) +
+   theme_classic() +
+   labs(x = bquote(bold('Body Mass Index'~(kg/m^2))),
+       y = "Frequency") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle(bquote(bold('Body Mass Index'))) 
+bmihist
+
+
+sbphist <- india.cvd %>%  
+  #filter(BMI<50) %>% 
+  ggplot() + 
+  geom_histogram(aes(x=bpsyst_avg), color="light blue", fill="light blue", binwidth = 2) + 
+  facet_wrap(~female_lab) +
+   theme_classic() +
+   labs(x = bquote(bold('Systolic blood pressure (mmHg)')),
+       y = "Frequency") +
+   theme(axis.text=element_text(size=18, face="bold", family="Times"),
+        axis.title=element_text(size=21, face="italic", family="Times"),
+        legend.title=element_blank(),
+        legend.text=element_text(size=21, family="Times"),
+        strip.text=element_text(size=21, family="Times", face="bold"), 
+        panel.spacing = unit(2, "lines"),
+        axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+        axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+        plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+  ggtitle(bquote(bold('Systolic blood pressure'))) 
+sbphist
+
+
+# agehist <- india.cvd %>%  
+#   filter(age<75) %>% 
+#   ggplot() + 
+#   geom_histogram(aes(x=age), color="black", fill="light blue", binwidth = 5) + 
+#   facet_wrap(~female_lab) +
+#    theme_classic() +
+#    labs(x = "Five-year age groups",
+#        y = "Frequency") +
+#    theme(axis.text=element_text(size=18, face="bold", family="Times"),
+#         axis.title=element_text(size=21, face="italic", family="Times"),
+#         legend.title=element_blank(),
+#         legend.text=element_text(size=21, family="Times"),
+#         strip.text=element_text(size=21, family="Times", face="bold"), 
+#         panel.spacing = unit(2, "lines"),
+#         axis.title.x = element_text(margin = margin(t = 20), family="Times"),
+#         axis.title.y = element_text(margin = margin(r = 20), family="Times"),
+#         plot.title = element_text(size = 25, hjust = 0.5, family="Times", face = "bold")) +
+#   ggtitle(bquote(bold('Age'))) 
+# agehist
+
+```
+
+
+```{r  CVD risk by mean household wealth quintile in a state / districct}
+
+
+####### Adding state labels
+india.cvd <- mutate(india.cvd, state_lab = fct_recode(state, 
+                                     "HP" = "Himachal Pradesh",
+                                     "PB" = "Punjab",
+                                     "CH" = "Chandigarh",
+                                     "HR" = "Haryana",
+                                     "DL" = "NCT of Delhi",
+                                     "SK" = "Sikkim",
+                                     "DD" = "Daman and Diu",
+                                     "AR" = "Arunachal Pradesh",
+                                     "NL" = "Nagaland",
+                                     "MN" = "Manipur",
+                                     "MZ" = "Mizoram",
+                                     "TR" = "Tripura",
+                                     "ML" = "Meghalaya",
+                                     "WB" = "West Bengal",
+                                     "MH" = "Maharashtra",
+                                     "AP" = "Andhra Pradesh",
+                                     "KA" = "Karnataka",
+                                     "GA" = "Goa",
+                                     "KL" = "Kerala",
+                                     "PY" = "Puducherry",
+                                     "TN" = "Tamil Nadu",
+                                     "AN" = "Andaman and Nicobar",
+                                     "TS" = "Telangana",
+                                     "UK" = "Uttarakhand",
+                                     "RJ" = "Rajasthan",
+                                     "UP" = "Uttar Pradesh",
+                                     "BR" = "Bihar",
+                                     "AS" = "Assam",
+                                     "JH" = "Jharkhand",
+                                     "OD" = "Odisha",
+                                     "CT" = "Chhattisgarh", 
+                                     "MP" = "Madhya Pradesh"))
+   
+
+
+india.cvd <- mutate(india.cvd, 
+                    q_ai_nat_dbl = as.numeric(q_ai_nat), 
+                    urban_dbl = as.numeric(urban)-1)
+
+library(spatstat)
+distmean.dat <- india.cvd %>%
+  group_by(state_dist) %>% 
+  mutate(prop_urban = 100*weighted.mean(urban_dbl, sgbdweight, na.rm=TRUE)) %>% 
+  ungroup() %>% 
+  group_by(state_dist, urban_lab) %>%
+  mutate(framrisk_dist = weighted.mean(framrisk, sgbdweight, na.rm=TRUE),
+         medianai = spatstat::weighted.median(ai_NAT_rurb, sgbdweight, na.rm=TRUE), 
+         bmi_dist = weighted.mean(BMI, sgbdweight, na.rm=TRUE),
+         diab_dist = 100*weighted.mean(diab_broad_dbl, sgbdweight, na.rm=TRUE),
+         currsmoke_dist = 100*weighted.mean(currsmoke_dbl, sgbdweight, na.rm=TRUE),
+         bpsyst_dist = weighted.mean(bpsyst_avg, sgbdweight, na.rm=TRUE)) %>%
+  filter(row_number()==1) %>%
+  ungroup() %>% 
+  mutate(q_medianai = ntile(medianai, 5)) %>% 
+  dplyr::select(state, state_lab, q_medianai, medianai, zone, framrisk_dist, bmi_dist, diab_dist, currsmoke_dist, bpsyst_dist, state_dist, urban_lab, prop_urban)
+
+
+distwealthfig <- distmean.dat %>% 
+  ggplot() +
+  geom_jitter(aes(y=framrisk_dist, x=q_medianai, color=zone, shape=zone), size=2.5) +
+  geom_boxplot(mapping=aes(y=framrisk_dist, x=q_medianai, group=as.factor(q_medianai)), outlier.shape = NA, alpha=0.8) +
+  theme_classic() + 
+  facet_wrap(~urban_lab) +
+  labs(x = "District wealth quintile",
+       y = "Mean 10-year CVD risk",
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20)),
+        strip.text.x = element_text(size=22, face="bold"),
+        strip.background = element_blank(),
+        panel.spacing = unit(2, "lines")) + 
+  scale_color_brewer(palette="Dark2") +
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25), limits=c(0, 28)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(0.4, 5.6)) +
+  coord_fixed(5.2/28, expand=F)
+distwealthfig
+
+
+disturbanizationfig <- distmean.dat %>% 
+  ggplot() +
+  geom_jitter(aes(y=framrisk_dist, x=prop_urban, color=zone, shape=zone), size=2.5) +
+  geom_smooth(mapping=aes(y=framrisk_dist, x=prop_urban), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  theme_classic() + 
+  labs(x = "% of participants in a district living in an urban area",
+       y = "Mean 10-year CVD risk",
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20)),
+        strip.text.x = element_text(size=22, face="bold"),
+        strip.background = element_blank(),
+        panel.spacing = unit(2, "lines")) + 
+  scale_color_brewer(palette="Dark2") +
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25), limits=c(0, 28)) +
+  scale_x_continuous(breaks = c(0, 25, 50, 75, 100), limits=c(-1, 105)) +
+  coord_fixed(106/28, expand=F)
+disturbanizationfig
+
+
+
+
+
+
+
+
+######################## CVD RISK FACTORS #######################
+
+#### BMI
+bmistatefig <- statemean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=bmi_st, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=bmi_st, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  geom_text_repel(mapping=aes(y=bmi_st, x=mean_ai, label = state_lab, fontface=2), 
+                  size = 6.5, segment.color = "black", segment.size = 0.3, family="Times") +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Mean Body Mass Index'~(kg/m^2))),
+       fill="") +
+  #facet_wrap(~urban_lab) + 
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(18, 19, 20, 21, 22, 23, 24, 25), limits=c(17, 26)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/9)
+bmistatefig
+
+pval <-lm(bmi_st ~ mean_ai, data=statemean.dat)
+
+bmidistfig <- distmean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=bmi_dist, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=bmi_dist, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Mean Body Mass Index'~(kg/m^2))),
+       fill="") +
+  #facet_wrap(~urban_lab) + 
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(18, 19, 20, 21, 22, 23, 24, 25), limits=c(17, 26)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/9)
+bmidistfig
+
+pval <-lm(bmi_dist ~ mean_ai, data=distmean.dat)
+
+
+##### systolic BP
+systbpstatefig <- statemean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=bpsyst_st, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=bpsyst_st, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  geom_text_repel(mapping=aes(y=bpsyst_st, x=mean_ai, label = state_lab, fontface=2), 
+                  size = 6.5, segment.color = "black", segment.size = 0.3, family="Times") +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Mean systolic BP (mmHg)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(115, 120, 125, 130, 135, 140), limits=c(111, 145)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/34)
+systbpstatefig
+
+pval <-lm(bpsyst_st ~ mean_ai, data=statemean.dat)
+
+systbpdistfig <- distmean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=bpsyst_dist, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=bpsyst_dist, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Mean systolic BP (mmHg)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(115, 120, 125, 130, 135, 140), limits=c(111, 145)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/34)
+systbpdistfig
+
+pval <-lm(bpsyst_dist ~ mean_ai, data=distmean.dat)
+
+
+### Smoking
+
+smokestatefig <- statemean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=currsmoke_st, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=currsmoke_st, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  geom_text_repel(mapping=aes(y=currsmoke_st, x=mean_ai, label = state_lab, fontface=2), 
+                  size = 6.5, segment.color = "black", segment.size = 0.3, family="Times") +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Smoking prevalence (%)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60), limits=c(0, 63)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/63)
+smokestatefig
+
+pval <-lm(currsmoke_st ~ mean_ai, data=statemean.dat)
+
+
+smokedistfig <- distmean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=currsmoke_dist, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=currsmoke_dist, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Smoking prevalence (%)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(0, 10, 20, 30, 40, 50, 60), limits=c(0, 63)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/63)
+smokedistfig
+
+pval <-lm(currsmoke_dist ~ mean_ai, data=distmean.dat)
+
+
+### Diabetes
+
+diabstatefig <- statemean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=diab_st, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=diab_st, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  geom_text_repel(mapping=aes(y=diab_st, x=mean_ai, label = state_lab, fontface=2), 
+                  size = 6.5, segment.color = "black", segment.size = 0.3, family="Times") +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Diabetes prevalence (%)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30), limits=c(0, 30)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/30)
+diabstatefig
+
+pval <-lm(diab_st ~ mean_ai, data=statemean.dat)
+
+
+
+diabdistfig <- distmean.dat %>% 
+  ggplot() +
+  stat_summary(aes(y=diab_dist, x=mean_ai, color=zone, shape=zone), fun.y="mean", size=5, geom="point") +
+  geom_smooth(mapping=aes(y=diab_dist, x=mean_ai), method="lm", se=FALSE, color="grey", alpha=0.7) +
+  theme_classic() + 
+  labs(x = "Mean household wealth quintile",
+       y = bquote(bold('Diabetes prevalence (%)')),
+       fill="") +
+  theme(axis.text=element_text(size=20),
+        axis.title=element_text(size=22, face="bold"),
+        legend.text=element_text(size=20),
+        legend.title = element_blank(),
+        #legend.position="bottom",
+        axis.title.x = element_text(margin = margin(t = 20)),
+        axis.title.y = element_text(margin = margin(r = 20))) +
+  scale_color_brewer(palette="Dark2") + 
+  scale_y_continuous(breaks = c(0, 5, 10, 15, 20, 25, 30), limits=c(0, 30)) +
+  scale_x_continuous(breaks = c(1, 2, 3, 4, 5), limits=c(1, 5)) + 
+  coord_fixed(4/30)
+diabdistfig
+
+pval <-lm(diab_dist ~ mean_ai, data=distmean.dat)
+
+```
+
+
+
