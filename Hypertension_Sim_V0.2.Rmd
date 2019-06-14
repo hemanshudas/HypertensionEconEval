@@ -17,7 +17,7 @@ start_time <- Sys.time()
 ```
 ```{r, echo=TRUE}
 #Model Inputs
-n.i <- 1000                             #Number of individuals
+n.i <- 1000                            #Number of individuals
 ini_age <- 50                           #Start Age of Cohort
 end_age <- 60                           #Simulation End Age
 cl <- 1                                 #Number of Cycle in a year
@@ -84,6 +84,7 @@ m.M <- m.C <- m.U <- matrix(nrow = n.i, ncol=n.t+1,
 m.M[,1] <- v.M_1              #Initial health state
 
 for (i in 1:n.i) {
+          seed=sample.int(100,1)
           set.seed(seed+i)
           m.C[i,1] <- Cost(m.M[i,1],c.W)              #Costs per individual for initial health state
           m.U[i,1] <- Util(m.M[i,1])              #QALY per individual for initial health state
@@ -233,6 +234,7 @@ sim_control <- MicroSim(p.W_CVD_NT,c.W_NT)
 sim_treat <- MicroSim(p.W_CVD_T,c.W_T)
 
 #Calculating the comparision between the drugs
+v.TS <-
 v.CVD <- c(sim_control$count_CVD,sim_treat$count_CVD)       #CVD Events
 v.C <- c(sim_control$tc_hat,sim_treat$tc_hat)               #Cost per person
 v.U <- c(sim_control$tu_hat,sim_treat$tu_hat)               #QALY per person
