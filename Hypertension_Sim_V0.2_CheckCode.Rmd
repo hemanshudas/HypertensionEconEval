@@ -26,7 +26,7 @@ n.s <- length(v.n)                      #Number of model states
 v.M_1 <- rep("W",n.i)                   #Everyone is Well at the start
 v.Str <- c("No Treatment","Treatment")  #Storing the Strategy Indicator
 n.t <- (end_age - ini_age)*12                #Simulation cycles
-d.c   <- d.e <- 0.03/12                    #Equal discounting of costs and QALYs by 3% p.a
+d.c   <- d.e <- 0                    #Equal discounting of costs and QALYs by 3%
 
 #Initialization of Transition Probabilities (Monthly transition)
 p.W_CVD <- 0.00206                  #Probability of CVD transitory event when well; 50 yr, M, Smoker, SBP 150mmHg, BMI 27.7
@@ -43,7 +43,7 @@ p.postST_D <- 0.0028 *0.664             #Probability of death post non-fatal ST
 p.W_D <- 0.00054                   #Probability of normal death from any state
 
 #Intiatlization of Cost for each state
-c.W <- 0                      #cost of being well
+c.W <- 1                      #cost of being well
 c.MI <- 1428.57                  #cost of acute MI treatment (Assumed to be INR 1,00,000)
 c.ST <- 2142.85                  #cost of acute Stroke treatment (Assumed to be INR 1,50,000)
 c.postMI <- c.postST <- 28.57 #cost of follow up care (Assumed to be INR 2000 p.m)
@@ -184,11 +184,11 @@ Probs <- function(M.it,p.W_CVD) {
           v.p.it <- rep(NA,n.s)                                       #Vector of transition probabilities
           names(v.p.it) <- v.n                                        #Naming the vector
           
-          v.p.it[M.it == "W"] <- c(1-(p.W_CVD+p.W_D),p.W_CVD*p.CVD_MI,p.W_CVD*p.CVD_ST,0,0,0,p.W_D) #tranistion probability when well
-          v.p.it[M.it == "MI"] <- c(0,0,0,p.MI_postMI,0,p.MI_cD,0)                          #transition probability when in MI state
-          v.p.it[M.it == "ST"] <- c(0,0,0,0,p.ST_postST,p.ST_cD,0)                          #transition probability when in Stroke state
-          v.p.it[M.it == "postMI"] <- c(0,0,0,(1-(p.postMI_cD+p.postMI_D)),0,p.postMI_cD,p.postMI_D)          #transition probability when in MI state
-          v.p.it[M.it == "postST"] <- c(0,0,0,0,(1-(p.postST_cD+p.postST_D)),p.postST_cD,p.postST_D)                          #transition probability when in Stroke state
+          v.p.it[M.it == "W"] <- c(1,0,0,0,0,0,0) #tranistion probability when well
+          v.p.it[M.it == "MI"] <- c(0,0,0,0,0,0,0)                          #transition probability when in MI state
+          v.p.it[M.it == "ST"] <- c(0,0,0,0,0,0,0)                          #transition probability when in Stroke state
+          v.p.it[M.it == "postMI"] <- c(0,0,0,0,0,0,0)          #transition probability when in MI state
+          v.p.it[M.it == "postST"] <- c(0,0,0,0,0,0,0)                          #transition probability when in Stroke state
           v.p.it[M.it == "cD"] <- c(0,0,0,0,0,1,0)                     #transition probability when in CVD Death state
           v.p.it[M.it == "D"] <- c(0,0,0,0,0,0,1)                       #transition probability when in Death state
           return(v.p.it)                                              #returning probabilities
