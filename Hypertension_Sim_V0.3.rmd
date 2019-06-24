@@ -17,9 +17,9 @@ start_time <- Sys.time()
 ```
 ```{r, echo=TRUE}
 #Model Inputs
-n.i <- 10                            #Number of individuals
+n.i <- 1000                            #Number of individuals
 ini_age <- 50                           #Start Age of Cohort
-end_age <- 60                           #Simulation End Age
+end_age <- 80                           #Simulation End Age
 cl <- 1                                 #Number of Cycle in a year
 v.n <- c("W","MI","ST","postMI","postST","cD","D")        #Model States: W-Well, CVD-CVD Event, MI - Myocardial Infraction Transitory State, ST- Transitory Stroke State, cD - CVD Death, D - Death due to other causes
 n.s <- length(v.n)                      #Number of model states
@@ -153,9 +153,9 @@ for (i in 1:n.i) {
 }
 
 #Finding the distribution of states across states
-m.CS <- matrix(nrow = 3, ncol=121,
+m.CS <- matrix(nrow = 3, ncol=n.t+1,
                dimnames = list(c("Well","CVD Death","Death"),
-                               paste("Cycle",0:120,sep = " ")))
+                               paste("Cycle",0:n.t+1,sep = " ")))
 m.CS[,] <- 0
 
 for (i in 1:n.i) {
