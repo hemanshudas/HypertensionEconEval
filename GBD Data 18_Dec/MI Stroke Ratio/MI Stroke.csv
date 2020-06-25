@@ -1,0 +1,361 @@
+measure,location,sex,age,cause,metric,year,val,upper,lower
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2009,24684.6596503,31919.2709454,18821.8579054
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2009,14263.5910377,19326.2040729,10014.9532317
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2009,38809.3373039,51781.6499618,28296.7159583
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2009,19454.2771117,27422.857039,13006.3883305
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2009,55201.9220671,66180.1436448,45174.0944311
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2009,26760.7784269,34028.3555616,20267.2694093
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2009,73364.5185627,95170.3626496,55220.0798713
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2009,37090.057829,50010.8153551,25719.4757203
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2009,92589.3302637,111164.391091,76272.1242933
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2009,52962.6868035,64361.3682028,42496.7768753
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2009,101799.28925,128211.985476,78560.9695673
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2009,66000.0201422,84834.0248739,50367.6577179
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2009,95269.295017,114748.670345,79646.8400385
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2009,73445.0357572,88655.5455119,61325.1496783
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2009,77158.0884681,100466.776155,58774.6472522
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2009,61770.473244,80303.548451,46724.2925503
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2009,75536.0221721,90397.5501809,63571.8375331
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2009,63822.8958816,76402.2935213,53822.4972929
+Incidence,India,Male,40 to 44,Stroke,Number,2009,30505.5029829,35580.3659711,25890.1688351
+Incidence,India,Female,40 to 44,Stroke,Number,2009,23408.7073868,27310.6622376,19883.4899558
+Incidence,India,Male,45 to 49,Stroke,Number,2009,40659.4269731,48421.7923277,33867.7931841
+Incidence,India,Female,45 to 49,Stroke,Number,2009,30810.3610115,37281.3719845,25550.1128356
+Incidence,India,Male,50 to 54,Stroke,Number,2009,48184.6356,54949.3444112,42367.7268803
+Incidence,India,Female,50 to 54,Stroke,Number,2009,36067.496862,41557.0872889,31499.1038559
+Incidence,India,Male,55 to 59,Stroke,Number,2009,55767.5792462,64439.3541365,48152.2258806
+Incidence,India,Female,55 to 59,Stroke,Number,2009,42740.8769782,50049.1991489,36495.3562058
+Incidence,India,Male,60 to 64,Stroke,Number,2009,62675.6305118,70045.5509046,56251.0772819
+Incidence,India,Female,60 to 64,Stroke,Number,2009,50019.1875234,56587.8987198,44589.0386891
+Incidence,India,Male,65 to 69,Stroke,Number,2009,63143.0131881,72352.2706154,55039.9462393
+Incidence,India,Female,65 to 69,Stroke,Number,2009,53022.4661093,61514.1056861,45809.2643864
+Incidence,India,Male,70 to 74,Stroke,Number,2009,50651.2575579,57341.4695137,44545.1163933
+Incidence,India,Female,70 to 74,Stroke,Number,2009,53619.5813952,60617.6186546,47120.9178169
+Incidence,India,Male,75 to 79,Stroke,Number,2009,33666.6757633,38330.3172177,29264.156306
+Incidence,India,Female,75 to 79,Stroke,Number,2009,42218.2178296,48144.9252176,36484.3630105
+Incidence,India,Male,80 plus,Stroke,Number,2009,35453.1513101,38743.9320056,32496.4109212
+Incidence,India,Female,80 plus,Stroke,Number,2009,46532.6759087,50909.1785676,42596.623546
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2013,25112.2068021,32742.297223,18956.5962707
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2013,15484.9937159,20791.6973672,10932.7368123
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2013,39218.6594562,52641.6765967,28370.8748908
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2013,21896.3695019,30848.225022,14645.3950354
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2013,56335.4392371,68511.0610596,45270.2034103
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2013,30540.8411523,38939.2445901,23045.1008271
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2013,73225.7583425,96625.1208801,53473.6905337
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2013,40646.0856544,54568.0353392,27930.2897517
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2013,94749.589693,114714.357358,77163.6861629
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2013,59361.1350823,72449.5932229,47019.5579059
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2013,102813.820764,133122.635737,78749.0873725
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2013,69779.4886621,91186.301113,52526.3515635
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2013,96056.5204506,116924.878462,79377.7429454
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2013,73819.2152723,90962.3131507,60907.8724268
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2013,77374.7576377,101731.830288,58262.4352959
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2013,69545.3383785,92746.6129312,51309.4206542
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2013,82868.8679833,99846.9768521,68614.3039485
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2013,76773.9741702,92741.0332174,63656.7598427
+Incidence,India,Male,40 to 44,Stroke,Number,2013,32509.2514697,38177.4268789,27260.4059335
+Incidence,India,Female,40 to 44,Stroke,Number,2013,25693.9446323,30146.4410074,21652.1226155
+Incidence,India,Male,45 to 49,Stroke,Number,2013,43628.951378,52626.6326151,35973.0857887
+Incidence,India,Female,45 to 49,Stroke,Number,2013,35110.4974601,42781.7407956,28872.4694137
+Incidence,India,Male,50 to 54,Stroke,Number,2013,53556.6336773,61565.8678049,46598.6787416
+Incidence,India,Female,50 to 54,Stroke,Number,2013,42398.7289028,49203.5794849,36745.7892869
+Incidence,India,Male,55 to 59,Stroke,Number,2013,61525.5325867,72653.544239,52175.0613091
+Incidence,India,Female,55 to 59,Stroke,Number,2013,49021.9738966,58243.8650625,41272.9563241
+Incidence,India,Male,60 to 64,Stroke,Number,2013,70501.7749351,80246.1939581,62432.1381563
+Incidence,India,Female,60 to 64,Stroke,Number,2013,58982.4826479,67929.6309717,52089.4151041
+Incidence,India,Male,65 to 69,Stroke,Number,2013,69135.4888282,80214.7446256,59362.0090007
+Incidence,India,Female,65 to 69,Stroke,Number,2013,58802.6763767,68964.7705411,49868.2866616
+Incidence,India,Male,70 to 74,Stroke,Number,2013,55000.4543154,63067.9639527,47540.9375786
+Incidence,India,Female,70 to 74,Stroke,Number,2013,56888.4522251,65168.8308652,49176.0757598
+Incidence,India,Male,75 to 79,Stroke,Number,2013,36321.2537037,42028.6693377,30872.9280396
+Incidence,India,Female,75 to 79,Stroke,Number,2013,50833.3837301,58732.0881151,43039.4364311
+Incidence,India,Male,80 plus,Stroke,Number,2013,41130.1920219,45579.2232644,37180.5215353
+Incidence,India,Female,80 plus,Stroke,Number,2013,58940.4163051,65379.7771162,53342.1170387
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2008,24677.1280375,31826.0314208,18842.9308648
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2008,13949.101715,18904.8290852,9850.74260581
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2008,38986.5939221,51769.6916423,28383.2138697
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2008,18987.6910291,26708.9844247,12698.1914006
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2008,55342.1213138,66024.648995,45550.3342855
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2008,26165.4304523,33100.6100817,19882.8969468
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2008,73290.9432072,94476.2182762,55960.2065129
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2008,36269.1191594,48533.9383443,25350.7410925
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2008,92851.2936176,110843.47127,76838.2373507
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2008,52116.9556032,63250.5330268,42049.4250009
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2008,101721.665472,127355.397262,78993.6628646
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2008,66301.1636174,84694.3068186,50874.6124389
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2008,95157.7254274,113686.345544,79701.9940165
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2008,72636.2045934,87079.7957629,60873.0898145
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2008,76926.2746244,99286.6071338,59086.4191075
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2008,59664.0393456,77554.1135153,45640.772783
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2008,73500.1275993,87235.2246298,62113.7142461
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2008,61345.5463238,72887.8940147,51868.3469698
+Incidence,India,Male,40 to 44,Stroke,Number,2008,29760.3147598,34574.2307846,25350.7187939
+Incidence,India,Female,40 to 44,Stroke,Number,2008,22832.4003703,26541.2820195,19427.0098756
+Incidence,India,Male,45 to 49,Stroke,Number,2008,39683.2986591,47190.2954144,33174.1263392
+Incidence,India,Female,45 to 49,Stroke,Number,2008,29842.357749,36008.4871638,24801.7331306
+Incidence,India,Male,50 to 54,Stroke,Number,2008,46782.6858832,53243.8458022,41196.8264417
+Incidence,India,Female,50 to 54,Stroke,Number,2008,34752.8417367,39989.4855623,30473.4270513
+Incidence,India,Male,55 to 59,Stroke,Number,2008,53932.1838724,62135.187598,46823.4012224
+Incidence,India,Female,55 to 59,Stroke,Number,2008,40996.4272021,47820.1007348,35098.8409415
+Incidence,India,Male,60 to 64,Stroke,Number,2008,61183.2300936,68109.4700209,55046.2252741
+Incidence,India,Female,60 to 64,Stroke,Number,2008,48403.0557379,54665.9367959,43277.3660916
+Incidence,India,Male,65 to 69,Stroke,Number,2008,61754.7597911,70555.7898232,54103.8468211
+Incidence,India,Female,65 to 69,Stroke,Number,2008,52581.7824826,60670.5437704,45623.0462516
+Incidence,India,Male,70 to 74,Stroke,Number,2008,49716.4052444,56037.6409663,43909.2294172
+Incidence,India,Female,70 to 74,Stroke,Number,2008,52256.6678909,58853.2375599,45961.5494262
+Incidence,India,Male,75 to 79,Stroke,Number,2008,33167.6167153,37624.1588443,28878.5393567
+Incidence,India,Female,75 to 79,Stroke,Number,2008,40065.4998227,45546.2849034,34798.8350093
+Incidence,India,Male,80 plus,Stroke,Number,2008,34031.031949,37137.9427828,31218.8178825
+Incidence,India,Female,80 plus,Stroke,Number,2008,44022.2029421,48181.1841511,40384.3778479
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2017,25431.4992199,33181.3883315,18986.1702026
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2017,16774.0406765,22545.1259259,11891.8972112
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2017,40429.9763656,54243.0866112,28739.7609428
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2017,25132.8830271,34727.1408059,17018.5195427
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2017,57137.1725218,70112.6633924,45088.4090994
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2017,35244.6800172,44687.7901639,26524.9472849
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2017,74269.0467854,97877.7664853,53345.0037178
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2017,46822.1510057,62716.8577953,32547.726995
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2017,91645.0081212,111596.107171,72751.9027921
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2017,64012.8166032,78806.0479587,50553.8406342
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2017,100741.284288,132584.284596,75601.985487
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2017,76414.1298399,101169.288872,56873.7987063
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2017,94855.312008,117472.803807,77577.6203831
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2017,75003.9080105,93251.3954192,60950.6904635
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2017,78903.6462522,105012.093436,58170.1391888
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2017,71378.616125,96179.2147074,52198.7722692
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2017,87207.8208524,106328.304411,71540.2874266
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2017,88568.2654717,108909.009982,72659.8774839
+Incidence,India,Male,40 to 44,Stroke,Number,2017,33169.9711103,39383.3357723,27432.1368802
+Incidence,India,Female,40 to 44,Stroke,Number,2017,28071.4359878,33168.0949924,23415.8650199
+Incidence,India,Male,45 to 49,Stroke,Number,2017,45829.9218979,56337.1882363,36998.4939815
+Incidence,India,Female,45 to 49,Stroke,Number,2017,40118.2571719,49087.0264656,32873.417097
+Incidence,India,Male,50 to 54,Stroke,Number,2017,57430.7486495,67016.8677466,49263.4475762
+Incidence,India,Female,50 to 54,Stroke,Number,2017,49333.5626263,57515.2026632,42307.4372044
+Incidence,India,Male,55 to 59,Stroke,Number,2017,68531.7789674,82024.731096,56863.0970863
+Incidence,India,Female,55 to 59,Stroke,Number,2017,57739.134616,69727.4003194,47875.850431
+Incidence,India,Male,60 to 64,Stroke,Number,2017,75973.921039,87727.4740362,66261.1235823
+Incidence,India,Female,60 to 64,Stroke,Number,2017,66685.1515077,77828.5288851,57796.4152895
+Incidence,India,Male,65 to 69,Stroke,Number,2017,75341.9772948,90025.7675111,63238.8734045
+Incidence,India,Female,65 to 69,Stroke,Number,2017,68659.2930297,83186.1042853,56670.9618595
+Incidence,India,Male,70 to 74,Stroke,Number,2017,60582.0258492,71348.0017211,51555.7146258
+Incidence,India,Female,70 to 74,Stroke,Number,2017,62269.7481919,72750.2633389,53263.4029872
+Incidence,India,Male,75 to 79,Stroke,Number,2017,42233.9117101,50313.5464526,35068.9407473
+Incidence,India,Female,75 to 79,Stroke,Number,2017,56874.4686872,67690.7783053,46822.637735
+Incidence,India,Male,80 plus,Stroke,Number,2017,47084.7703104,53519.4811287,41703.2194756
+Incidence,India,Female,80 plus,Stroke,Number,2017,71970.3135469,81463.7368187,63563.9614963
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2012,25077.3752272,32648.6753161,18964.6053073
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2012,15217.8440617,20517.2231544,10712.2362537
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2012,39001.0539303,52195.3499647,28296.6412711
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2012,21185.6394081,29888.4078108,14129.8989841
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2012,56077.0416876,68186.89773,45252.5453801
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2012,29495.8425841,37591.163479,22310.4201604
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2012,73230.0280356,96334.184968,53845.6981226
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2012,39548.9137709,53257.9617278,27176.0575829
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2012,94530.9929823,114349.189786,76883.930866
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2012,57796.6640613,70491.1053815,45810.9305298
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2012,102712.077038,131610.21033,78774.5262731
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2012,68201.1125861,88769.8526823,51521.1094325
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2012,96121.281121,116754.170531,79371.7974513
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2012,74072.1970091,90853.6326842,61380.5060895
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2012,77226.2596667,101443.918145,58174.0570133
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2012,67851.8570524,89708.54479,50334.2125264
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2012,81358.5977629,97898.3566141,67831.4246035
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2012,73262.0583861,88523.8928884,61082.1542958
+Incidence,India,Male,40 to 44,Stroke,Number,2012,32232.8611605,37778.4800166,27161.1044344
+Incidence,India,Female,40 to 44,Stroke,Number,2012,25193.0141234,29517.8989265,21216.7720919
+Incidence,India,Male,45 to 49,Stroke,Number,2012,42941.1726662,51696.2934846,35524.9360239
+Incidence,India,Female,45 to 49,Stroke,Number,2012,33937.9989893,41332.5732003,28031.3578835
+Incidence,India,Male,50 to 54,Stroke,Number,2012,52349.0769382,60054.2635792,45696.8765169
+Incidence,India,Female,50 to 54,Stroke,Number,2012,40752.6211688,47204.3222087,35408.3867347
+Incidence,India,Male,55 to 59,Stroke,Number,2012,60070.6589165,70677.6760883,51146.3852451
+Incidence,India,Female,55 to 59,Stroke,Number,2012,47290.8286126,56072.1633615,39935.1130949
+Incidence,India,Male,60 to 64,Stroke,Number,2012,68644.796969,77866.7615575,61060.2910699
+Incidence,India,Female,60 to 64,Stroke,Number,2012,56729.3744178,65098.9889644,50325.0804371
+Incidence,India,Male,65 to 69,Stroke,Number,2012,67610.3424626,78094.5081934,58441.2112114
+Incidence,India,Female,65 to 69,Stroke,Number,2012,56702.5704696,66275.2475613,48304.699858
+Incidence,India,Male,70 to 74,Stroke,Number,2012,53898.5202007,61463.1853274,46871.4349267
+Incidence,India,Female,70 to 74,Stroke,Number,2012,56229.8103676,64329.1414784,48887.3418834
+Incidence,India,Male,75 to 79,Stroke,Number,2012,35405.308539,40654.823694,30341.5487975
+Incidence,India,Female,75 to 79,Stroke,Number,2012,48679.2544714,55941.5678232,41619.9418132
+Incidence,India,Male,80 plus,Stroke,Number,2012,39735.4909936,43979.317894,36059.768542
+Incidence,India,Female,80 plus,Stroke,Number,2012,55509.5852905,61365.1358385,50370.4396596
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2011,24978.2982734,32407.8833297,18942.5742409
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2011,14922.5870349,20197.1821923,10474.0569106
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2011,38862.3018374,52057.6752242,28242.7680945
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2011,20545.7612008,28977.6182739,13698.9636311
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2011,55770.6147494,67554.8732628,45256.2328712
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2011,28502.3187097,36283.7293076,21549.4297133
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2011,73478.2587377,96196.954051,54182.1078905
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2011,38755.7730112,52212.3609908,26643.5731164
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2011,93914.1231307,113362.195112,76689.7596323
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2011,56027.2843108,68225.8461817,44632.7431374
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2011,101989.236026,129589.095156,78179.9800742
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2011,66691.9567465,86428.5989957,50568.8560045
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2011,96081.4776324,116438.09887,79703.4271805
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2011,74222.0962409,90456.3761816,61736.933157
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2011,77237.1971563,101322.725614,58304.6063973
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2011,65973.3994163,86545.8239861,49133.9444238
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2011,79529.8238121,95641.1420709,66509.1060245
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2011,69856.4252989,83978.6403733,58353.9834893
+Incidence,India,Male,40 to 44,Stroke,Number,2011,31804.8995704,37216.9989421,26828.7015017
+Incidence,India,Female,40 to 44,Stroke,Number,2011,24640.203351,28868.8669876,20801.8123257
+Incidence,India,Male,45 to 49,Stroke,Number,2011,42254.164344,50637.9351283,35081.9698863
+Incidence,India,Female,45 to 49,Stroke,Number,2011,32844.7807243,39973.0734685,27078.3027414
+Incidence,India,Male,50 to 54,Stroke,Number,2011,51052.8806375,58430.2797968,44686.3083146
+Incidence,India,Female,50 to 54,Stroke,Number,2011,39140.7024043,45248.7934765,34021.0765651
+Incidence,India,Male,55 to 59,Stroke,Number,2011,58846.5326978,68637.0458773,50403.7895042
+Incidence,India,Female,55 to 59,Stroke,Number,2011,45887.8617998,54160.2627727,38830.5643457
+Incidence,India,Male,60 to 64,Stroke,Number,2011,66615.4868889,75181.906394,59416.9374316
+Incidence,India,Female,60 to 64,Stroke,Number,2011,54322.4936049,61964.757768,48252.4385006
+Incidence,India,Male,65 to 69,Stroke,Number,2011,65813.9225153,75895.855573,57140.0790975
+Incidence,India,Female,65 to 69,Stroke,Number,2011,54778.1729438,63854.3188472,46929.8207526
+Incidence,India,Male,70 to 74,Stroke,Number,2011,52864.1591106,60172.9580614,46252.0718326
+Incidence,India,Female,70 to 74,Stroke,Number,2011,55582.0580895,63293.6389693,48444.6574549
+Incidence,India,Male,75 to 79,Stroke,Number,2011,34710.7003827,39766.7732034,29848.5347277
+Incidence,India,Female,75 to 79,Stroke,Number,2011,46527.3151138,53356.6810956,39954.9620204
+Incidence,India,Male,80 plus,Stroke,Number,2011,38301.3371645,42301.4079069,34910.3807063
+Incidence,India,Female,80 plus,Stroke,Number,2011,52268.4473362,57535.8748073,47653.4301857
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2016,25264.58539,32961.9908644,18886.7746442
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2016,16382.2018141,21957.0864388,11614.2952444
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2016,40190.0888629,53882.1045668,28727.770425
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2016,24321.9596377,33712.9749172,16425.7575929
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2016,56865.1246935,69724.6464702,45039.5534996
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2016,33938.8645229,43160.5967511,25514.4439916
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2016,73987.0619443,97588.4601771,53358.0080023
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2016,45109.1337156,60505.3352628,31217.5221941
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2016,93191.9345812,113245.48922,74651.1883373
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2016,63141.8808305,77360.8792821,49907.4271942
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2016,101625.447252,133558.847861,76673.9758551
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2016,74638.031277,98523.1632459,55714.0458607
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2016,94907.6137267,116779.339258,77886.9864484
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2016,73698.1307263,91534.9124206,60110.2338621
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2016,78741.092879,104212.865497,58292.0178468
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2016,71688.1201993,96619.9886142,52427.1075803
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2016,86225.4536649,104929.051488,70787.0252764
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2016,85919.2751154,105272.969243,70671.5017276
+Incidence,India,Male,40 to 44,Stroke,Number,2016,32984.7998873,39007.4515753,27381.6300999
+Incidence,India,Female,40 to 44,Stroke,Number,2016,27350.4276618,32255.5134161,22909.8875643
+Incidence,India,Male,45 to 49,Stroke,Number,2016,45501.2995913,55793.3116161,37010.9025187
+Incidence,India,Female,45 to 49,Stroke,Number,2016,38908.7709806,47531.2318307,31890.9227571
+Incidence,India,Male,50 to 54,Stroke,Number,2016,56525.0925939,65628.957768,48760.6884362
+Incidence,India,Female,50 to 54,Stroke,Number,2016,47471.6328078,55282.5859684,40792.281463
+Incidence,India,Male,55 to 59,Stroke,Number,2016,66739.5121345,79573.1429887,55703.401466
+Incidence,India,Female,55 to 59,Stroke,Number,2016,55417.0826902,66494.3921893,46065.0159082
+Incidence,India,Male,60 to 64,Stroke,Number,2016,75068.2805978,86439.2882569,65678.4460072
+Incidence,India,Female,60 to 64,Stroke,Number,2016,65050.3026191,75670.0710163,56702.1791685
+Incidence,India,Male,65 to 69,Stroke,Number,2016,73733.420675,87530.1594054,62229.8963006
+Incidence,India,Female,65 to 69,Stroke,Number,2016,65895.7282286,79217.8216774,54793.2088339
+Incidence,India,Male,70 to 74,Stroke,Number,2016,58750.0949339,68708.1034829,50277.1403045
+Incidence,India,Female,70 to 74,Stroke,Number,2016,59949.2783195,69689.1887914,51333.8806361
+Incidence,India,Male,75 to 79,Stroke,Number,2016,40578.8999611,47988.4873394,33900.2176673
+Incidence,India,Female,75 to 79,Stroke,Number,2016,55826.290522,66023.5353404,46389.925474
+Incidence,India,Male,80 plus,Stroke,Number,2016,45484.3270641,51251.5678994,40551.7024382
+Incidence,India,Female,80 plus,Stroke,Number,2016,68809.9424551,77524.7949015,61166.3190737
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2015,25172.8093182,32837.1872643,18895.122632
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2015,16047.0066554,21454.0222337,11378.3943329
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2015,39857.3316027,53385.9388743,28677.6141289
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2015,23486.51049,32686.9121353,15813.1095065
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2015,56694.6992949,69203.8490086,45101.920843
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2015,32747.7020771,41704.4710808,24617.1183628
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2015,73685.1473923,97059.2796653,53299.8265153
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2015,43481.2467875,58249.5867863,29973.0888211
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2015,95098.118691,115111.035527,76979.4755564
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2015,62778.9730306,76752.775225,49447.6714933
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2015,100770.336915,131807.956892,76509.015443
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2015,71799.4807948,94480.7330504,53740.9782694
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2015,95569.003182,117115.028147,78665.5058695
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2015,73447.4086155,91199.9788273,60141.6405453
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2015,78218.0211968,103161.261969,58196.1617106
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2015,71513.630635,95901.2954839,52436.913474
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2015,85296.2638153,103390.391979,70093.6934674
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2015,83128.4086498,101316.381103,68503.4723182
+Incidence,India,Male,40 to 44,Stroke,Number,2015,32838.8493263,38752.132388,27360.7286762
+Incidence,India,Female,40 to 44,Stroke,Number,2015,26734.8902709,31453.7415256,22492.7746995
+Incidence,India,Male,45 to 49,Stroke,Number,2015,44964.1229894,54801.3698828,36788.840879
+Incidence,India,Female,45 to 49,Stroke,Number,2015,37630.6848698,46031.7670202,30848.9832974
+Incidence,India,Male,50 to 54,Stroke,Number,2015,55626.4109251,64261.6844815,48187.9884255
+Incidence,India,Female,50 to 54,Stroke,Number,2015,45737.7145519,53219.6565118,39366.1350568
+Incidence,India,Male,55 to 59,Stroke,Number,2015,64934.7707894,77226.6478372,54395.6225543
+Incidence,India,Female,55 to 59,Stroke,Number,2015,53154.2681807,63720.2394433,44465.5729445
+Incidence,India,Male,60 to 64,Stroke,Number,2015,74530.1761875,85565.841594,65677.5554182
+Incidence,India,Female,60 to 64,Stroke,Number,2015,63938.2540595,73993.479727,56046.8517186
+Incidence,India,Male,65 to 69,Stroke,Number,2015,71117.8614746,83753.7845458,60327.6022297
+Incidence,India,Female,65 to 69,Stroke,Number,2015,62331.6266177,74206.7027008,52210.9521159
+Incidence,India,Male,70 to 74,Stroke,Number,2015,57477.5517783,66733.0000884,49460.4137354
+Incidence,India,Female,70 to 74,Stroke,Number,2015,58589.716857,67700.2568382,50349.5218092
+Incidence,India,Male,75 to 79,Stroke,Number,2015,38935.8631076,45586.0806885,32698.8344431
+Incidence,India,Female,75 to 79,Stroke,Number,2015,54469.7212894,63854.4948661,45449.8547599
+Incidence,India,Male,80 plus,Stroke,Number,2015,44010.436356,49187.7318441,39489.3868938
+Incidence,India,Female,80 plus,Stroke,Number,2015,65629.2346231,73628.6851791,58707.7789278
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2010,24801.4416073,32194.9757486,18860.4708957
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2010,14593.6976913,19771.9666546,10198.8559768
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2010,38761.2299268,52019.5078404,28122.529281
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2010,19967.3954492,28153.7635204,13284.9654761
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2010,55370.8720569,66776.3084933,45122.9154777
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2010,27553.0045107,35031.7335615,20833.6989376
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2010,74066.3979156,96704.9096693,54859.0455493
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2010,38318.071794,51584.7121941,26311.5834837
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2010,91958.9074595,110837.131904,75532.2791869
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2010,53609.0219351,65263.4510651,42875.6271203
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2010,101922.465043,128472.44953,78260.8778761
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2010,66091.9719075,85238.7684628,50148.4228456
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2010,95578.593878,115343.074038,79558.432176
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2010,73974.7306932,89767.8889535,61597.3391423
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2010,77206.9930736,101176.243279,58304.1024017
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2010,63901.6310496,83626.0572969,47825.5096934
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2010,77542.8221232,93486.9036807,65028.7374188
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2010,66646.1764679,80034.9665036,55952.7986383
+Incidence,India,Male,40 to 44,Stroke,Number,2010,31210.8217001,36464.0896191,26416.6955853
+Incidence,India,Female,40 to 44,Stroke,Number,2010,24024.9689534,28108.6306778,20386.1747891
+Incidence,India,Male,45 to 49,Stroke,Number,2010,41515.0140516,49680.2080555,34512.0411137
+Incidence,India,Female,45 to 49,Stroke,Number,2010,31808.9730405,38605.5854822,26319.5165026
+Incidence,India,Male,50 to 54,Stroke,Number,2010,49639.6365961,56668.2542737,43527.9390748
+Incidence,India,Female,50 to 54,Stroke,Number,2010,37554.1576023,43326.5387045,32690.5096736
+Incidence,India,Male,55 to 59,Stroke,Number,2010,57920.7623203,67245.3236476,49640.8669306
+Incidence,India,Female,55 to 59,Stroke,Number,2010,44864.7645062,52706.9313648,38061.0233975
+Incidence,India,Male,60 to 64,Stroke,Number,2010,63792.0261929,71608.007717,57111.4036082
+Incidence,India,Female,60 to 64,Stroke,Number,2010,51339.8799684,58308.3612968,45649.3086953
+Incidence,India,Male,65 to 69,Stroke,Number,2010,64516.0284988,74104.2501912,56007.2539834
+Incidence,India,Female,65 to 69,Stroke,Number,2010,53705.2346652,62525.0827295,46186.7948463
+Incidence,India,Male,70 to 74,Stroke,Number,2010,51697.9997,58763.3193962,45385.7493673
+Incidence,India,Female,70 to 74,Stroke,Number,2010,54724.287699,62053.5969201,47768.0814566
+Incidence,India,Male,75 to 79,Stroke,Number,2010,34146.4048008,39037.9639108,29461.3959554
+Incidence,India,Female,75 to 79,Stroke,Number,2010,44385.4908472,50784.8125827,38211.2230645
+Incidence,India,Male,80 plus,Stroke,Number,2010,36873.5724886,40442.0490136,33654.5142459
+Incidence,India,Female,80 plus,Stroke,Number,2010,49270.6140813,53960.4586454,45008.4825312
+Incidence,India,Male,40 to 44,Ischemic heart disease,Number,2014,25131.3889398,32776.1597948,18919.1658219
+Incidence,India,Female,40 to 44,Ischemic heart disease,Number,2014,15753.9189044,21060.813841,11155.1570857
+Incidence,India,Male,45 to 49,Ischemic heart disease,Number,2014,39511.3621111,52861.1680655,28497.664357
+Incidence,India,Female,45 to 49,Ischemic heart disease,Number,2014,22667.695022,31715.4079027,15220.3954948
+Incidence,India,Male,50 to 54,Ischemic heart disease,Number,2014,56539.3658354,68745.0799198,45210.623817
+Incidence,India,Female,50 to 54,Ischemic heart disease,Number,2014,31626.182599,40311.8584992,23813.5678366
+Incidence,India,Male,55 to 59,Ischemic heart disease,Number,2014,73405.7343562,96784.2468525,53377.5030004
+Incidence,India,Female,55 to 59,Ischemic heart disease,Number,2014,41977.5866594,56356.8283318,28851.3065046
+Incidence,India,Male,60 to 64,Ischemic heart disease,Number,2014,94823.4367756,114728.296656,77136.001032
+Incidence,India,Female,60 to 64,Ischemic heart disease,Number,2014,60909.135561,74411.1693549,48122.2998344
+Incidence,India,Male,65 to 69,Ischemic heart disease,Number,2014,102274.160941,133559.151832,78008.060172
+Incidence,India,Female,65 to 69,Ischemic heart disease,Number,2014,71132.2060871,93304.9336877,53308.0963557
+Incidence,India,Male,70 to 74,Ischemic heart disease,Number,2014,95899.5002599,117126.682536,79037.0588177
+Incidence,India,Female,70 to 74,Ischemic heart disease,Number,2014,73563.4250077,90987.2880338,60484.7574885
+Incidence,India,Male,75 to 79,Ischemic heart disease,Number,2014,77719.2154218,102436.181152,58276.3926602
+Incidence,India,Female,75 to 79,Ischemic heart disease,Number,2014,70803.0419948,94648.6737786,52133.4229089
+Incidence,India,Male,80 plus,Ischemic heart disease,Number,2014,84174.2576642,101693.560059,69492.473481
+Incidence,India,Female,80 plus,Ischemic heart disease,Number,2014,80106.2570137,97325.0930608,66190.0267252
+Incidence,India,Male,40 to 44,Stroke,Number,2014,32694.3585933,38483.0809745,27331.1810525
+Incidence,India,Female,40 to 44,Stroke,Number,2014,26194.4854976,30788.2884787,22044.1611129
+Incidence,India,Male,45 to 49,Stroke,Number,2014,44313.4738095,53798.1171234,36487.5601364
+Incidence,India,Female,45 to 49,Stroke,Number,2014,36348.3819854,44300.5624305,29875.8540221
+Incidence,India,Male,50 to 54,Stroke,Number,2014,54653.1441667,62849.6669015,47469.5323153
+Incidence,India,Female,50 to 54,Stroke,Number,2014,44062.6156826,51217.9725193,38087.4841662
+Incidence,India,Male,55 to 59,Stroke,Number,2014,63170.8395092,74906.8312355,53198.122618
+Incidence,India,Female,55 to 59,Stroke,Number,2014,51001.8507528,60773.1924439,42834.2503106
+Incidence,India,Male,60 to 64,Stroke,Number,2014,72372.4789201,82830.1366902,63964.7606952
+Incidence,India,Female,60 to 64,Stroke,Number,2014,61269.464172,70793.0845688,53984.3978215
+Incidence,India,Male,65 to 69,Stroke,Number,2014,70381.1049354,82342.9696901,60047.3520766
+Incidence,India,Female,65 to 69,Stroke,Number,2014,60820.1375967,71739.9721347,51243.7592323
+Incidence,India,Male,70 to 74,Stroke,Number,2014,56202.288609,64858.7475541,48420.5036497
+Incidence,India,Female,70 to 74,Stroke,Number,2014,57636.0922372,66372.5557775,49779.1379595
+Incidence,India,Male,75 to 79,Stroke,Number,2014,37497.6191865,43662.3215205,31686.0385192
+Incidence,India,Female,75 to 79,Stroke,Number,2014,52798.6811062,61527.8332181,44362.6137098
+Incidence,India,Male,80 plus,Stroke,Number,2014,42551.0594645,47313.5484294,38368.7531629
+Incidence,India,Female,80 plus,Stroke,Number,2014,62354.8701075,69506.4229942,56121.4369758
